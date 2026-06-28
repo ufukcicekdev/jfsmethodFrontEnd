@@ -97,14 +97,25 @@ body {
 
 .animate-float {
   animation: float 18s ease-in-out infinite;
+  will-change: transform;
 }
 
 .animate-float-reverse {
   animation: float-reverse 22s ease-in-out infinite;
+  will-change: transform;
 }
 
 .animate-float-slow {
   animation: float 28s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-float-reverse,
+  .animate-float-slow {
+    animation: none;
+  }
 }
 
 @keyframes fade-up {

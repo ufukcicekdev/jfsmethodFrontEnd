@@ -23,6 +23,9 @@ export function ParallaxSection({
     const bg = bgRef.current;
     if (!section || !bg) return;
 
+    // Mobilde ve reduced-motion tercihinde parallax'ı devre dışı bırak
+    if (window.innerWidth < 768 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
     const onScroll = () => {
       const rect = section.getBoundingClientRect();
       const viewH = window.innerHeight;

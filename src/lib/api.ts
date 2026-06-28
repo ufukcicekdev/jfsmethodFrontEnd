@@ -1118,6 +1118,9 @@ export const api = {
         token,
       }),
 
+    sendNotification: (token: string, data: { title: string; body: string; patient_ids?: number[] }) =>
+      apiFetch<{ sent_to: number }>("/admin/notifications/send/", { token, method: "POST", body: JSON.stringify(data) }),
+
     exerciseLibrary: (token: string) =>
       apiFetch<Exercise[]>("/admin/exercises/", { token }),
 
