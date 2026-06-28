@@ -8,6 +8,7 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
+import { createPortal } from "react-dom";
 
 export interface SelectOption<T extends string | number = string> {
   value: T;
@@ -66,8 +67,10 @@ export function CustomSelect<T extends string | number>({
   const selectId = id ?? name ?? generatedId;
   const listboxId = `${selectId}-listbox`;
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLUListElement>(null);
   const [open, setOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   const selectedOption = options.find((option) => option.value === value);
   const enabledOptions = options.filter((option) => !option.disabled);
@@ -90,9 +93,12 @@ export function CustomSelect<T extends string | number>({
     if (!open) return;
 
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
       if (
         containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
+        !containerRef.current.contains(target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
       ) {
         close();
       }
@@ -109,6 +115,7 @@ export function CustomSelect<T extends string | number>({
       document.removeEventListener("keydown", handleEscape);
     };
   }, [open, close]);
+
 
   useEffect(() => {
     if (!open) return;
@@ -170,7 +177,20 @@ export function CustomSelect<T extends string | number>({
         aria-expanded={open}
         aria-controls={listboxId}
         disabled={disabled}
-        onClick={() => !disabled && setOpen((current) => !current)}
+        onClick={() => {
+          if (disabled) return;
+          if (!open && containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            setDropdownStyle({
+              position: "fixed",
+              top: rect.bottom + 6,
+              left: rect.left,
+              width: rect.width,
+              zIndex: 9999,
+            });
+          }
+          setOpen((current) => !current);
+        }}
         onKeyDown={handleKeyDown}
         className={`${triggerClassName} ${open ? "border-blue-400 ring-2 ring-blue-400/25 dark:border-blue-400" : ""}`}
       >
@@ -180,12 +200,14 @@ export function CustomSelect<T extends string | number>({
         <ChevronIcon open={open} />
       </button>
 
-      {open && (
+      {open && typeof document !== "undefined" && createPortal(
         <ul
+          ref={dropdownRef}
           id={listboxId}
           role="listbox"
           aria-labelledby={selectId}
-          className="absolute z-50 mt-2 max-h-60 w-full overflow-auto rounded-2xl border border-white/30 bg-white/95 p-1.5 shadow-xl shadow-slate-300/30 backdrop-blur-xl dark:border-slate-600/50 dark:bg-slate-900/95 dark:shadow-black/40"
+          style={dropdownStyle}
+          className="max-h-60 overflow-auto rounded-2xl border border-white/30 bg-white/95 p-1.5 shadow-xl shadow-slate-300/30 backdrop-blur-xl dark:border-slate-600/50 dark:bg-slate-900/95 dark:shadow-black/40"
         >
           {options.map((option) => {
             const enabledIndex = enabledOptions.indexOf(option);
@@ -218,7 +240,8 @@ export function CustomSelect<T extends string | number>({
               </li>
             );
           })}
-        </ul>
+        </ul>,
+        document.body
       )}
     </div>
   );

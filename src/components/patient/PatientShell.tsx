@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { FluidBackground } from "@/components/layout/FluidBackground";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import { PatientNotificationBell } from "@/components/patient/PatientNotificationBell";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { DarkModeToggle } from "@/components/ui/DarkModeToggle";
@@ -11,11 +12,12 @@ import { isStaffUser } from "@/lib/auth";
 
 const NAV_ITEMS = [
   { href: "/hesabim", label: "Genel Bakış", exact: true },
-  { href: "/hesabim/randevular", label: "Randevular", exact: false },
   { href: "/hesabim/paketler", label: "Paketlerim", exact: false },
   { href: "/hesabim/profil", label: "Profil & Kilo", exact: false },
   { href: "/hesabim/diyet", label: "Diyet Planım", exact: false },
   { href: "/hesabim/dijital-ikiz", label: "Tedavi İkizi", exact: false },
+  { href: "/hesabim/olcumler", label: "Ölçümlerim", exact: false },
+  { href: "/hesabim/ayarlar", label: "Ayarlar", exact: false },
 ];
 
 function Spinner() {
@@ -130,7 +132,7 @@ function SidebarContent({
 export function PatientShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, refreshUser } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -167,6 +169,15 @@ export function PatientShell({ children }: { children: ReactNode }) {
       <>
         <FluidBackground />
         <Spinner />
+      </>
+    );
+  }
+
+  if (!user.onboarding_completed) {
+    return (
+      <>
+        <FluidBackground />
+        <OnboardingFlow onComplete={refreshUser} />
       </>
     );
   }

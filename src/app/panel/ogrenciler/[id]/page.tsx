@@ -35,7 +35,7 @@ export default function StudentDetailPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [newWeight, setNewWeight] = useState("");
-  const [activeTab, setActiveTab] = useState<"profil" | "egzersizler" | "paketler" | "postur" | "olcumler" | "diyet">("profil");
+  const [activeTab, setActiveTab] = useState<"profil" | "egzersizler" | "paketler" | "postur" | "olcumler" | "diyet" | "onboarding">("profil");
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -206,7 +206,7 @@ export default function StudentDetailPage() {
       )}
 
       <div className="flex flex-wrap gap-1 rounded-2xl border border-white/30 bg-white/40 p-1 backdrop-blur-md dark:border-slate-600/40 dark:bg-slate-900/40">
-        {(["profil", "egzersizler", "paketler", "postur", "olcumler", "diyet"] as const).map((tab) => {
+        {(["profil", "egzersizler", "paketler", "postur", "olcumler", "diyet", "onboarding"] as const).map((tab) => {
           const labels: Record<string, string> = {
             profil: "Profil",
             egzersizler: "Egzersizler",
@@ -214,6 +214,7 @@ export default function StudentDetailPage() {
             postur: "Postür & Fotoğraf",
             olcumler: "Kilo & Ölçümler",
             diyet: "Diyet",
+            onboarding: "Onboarding",
           };
           return (
             <button
@@ -318,6 +319,55 @@ export default function StudentDetailPage() {
       {activeTab === "diyet" && (
         <PatientDietSection patientId={id} onMessage={showMessage} />
       )}
+
+      {activeTab === "onboarding" && (
+        <PatientOnboardingTab patientId={id} />
+      )}
+    </div>
+  );
+}
+
+function PatientOnboardingTab({ patientId }: { patientId: number }) {
+  const [answers, setAnswers] = useState<import("@/lib/api").OnboardingAnswer[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = getAccessToken();
+    if (!token) return;
+    api.admin.onboarding.patientAnswers(token, patientId).then((data) => {
+      setAnswers(data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [patientId]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="h-7 w-7 animate-spin rounded-full border-2 border-blue-200 border-t-blue-500" />
+      </div>
+    );
+  }
+
+  if (answers.length === 0) {
+    return (
+      <GlassCard className="p-8 text-center">
+        <p className="text-slate-500 dark:text-slate-400">Onboarding yanıtı bulunamadı.</p>
+      </GlassCard>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {answers.map((a) => (
+        <GlassCard key={a.id} className="p-4 sm:p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            {a.question_text}
+          </p>
+          <p className="mt-1.5 text-sm text-slate-800 dark:text-slate-100">
+            {Array.isArray(a.answer) ? a.answer.join(", ") : String(a.answer)}
+          </p>
+        </GlassCard>
+      ))}
     </div>
   );
 }

@@ -213,6 +213,26 @@ export interface AuthUser {
   full_name: string;
   is_staff: boolean;
   is_superuser: boolean;
+  onboarding_completed: boolean;
+}
+
+export interface OnboardingQuestion {
+  id: number;
+  text: string;
+  question_type: "text" | "choice" | "scale" | "multi";
+  options: string[];
+  is_required: boolean;
+  sort_order: number;
+  is_active?: boolean;
+}
+
+export interface OnboardingAnswer {
+  id: number;
+  question: number;
+  question_text: string;
+  question_type: string;
+  answer: string | string[] | number;
+  answered_at: string;
 }
 
 export interface AuthResponse {
@@ -603,6 +623,11 @@ export interface WellnessDashboard {
 }
 
 export const api = {
+  onboarding: {
+    questions: (token: string) => apiFetch<OnboardingQuestion[]>("/onboarding/questions/", { token }),
+    submit: (token: string, answers: { question_id: number; answer: unknown }[]) =>
+      apiFetch<{ completed: boolean }>("/onboarding/submit/", { token, method: "POST", body: JSON.stringify({ answers }) }),
+  },
   faqs: {
     list: () => apiFetch<Faq[]>("/faqs/"),
   },
@@ -1436,6 +1461,13 @@ export const api = {
       treatments: { list: (t: string) => apiFetch<LandingTreatment[]>("/admin/landing/treatments/", { token: t }), create: (t: string, d: Partial<LandingTreatment>) => apiFetch<LandingTreatment>("/admin/landing/treatments/", { token: t, method: "POST", body: JSON.stringify(d) }), update: (t: string, id: number, d: Partial<LandingTreatment>) => apiFetch<LandingTreatment>(`/admin/landing/treatments/${id}/`, { token: t, method: "PUT", body: JSON.stringify(d) }), delete: (t: string, id: number) => fetch(`${API_BASE}/admin/landing/treatments/${id}/`, { method: "DELETE", headers: { Authorization: `Bearer ${t}` } }).then(r => { if (!r.ok) throw new Error(); }) },
       whyUs: { list: (t: string) => apiFetch<LandingWhyUsItem[]>("/admin/landing/why-us/", { token: t }), create: (t: string, d: Partial<LandingWhyUsItem>) => apiFetch<LandingWhyUsItem>("/admin/landing/why-us/", { token: t, method: "POST", body: JSON.stringify(d) }), update: (t: string, id: number, d: Partial<LandingWhyUsItem>) => apiFetch<LandingWhyUsItem>(`/admin/landing/why-us/${id}/`, { token: t, method: "PUT", body: JSON.stringify(d) }), delete: (t: string, id: number) => fetch(`${API_BASE}/admin/landing/why-us/${id}/`, { method: "DELETE", headers: { Authorization: `Bearer ${t}` } }).then(r => { if (!r.ok) throw new Error(); }) },
     },
+    onboarding: {
+      list: (token: string) => apiFetch<OnboardingQuestion[]>("/admin/onboarding/questions/", { token }),
+      create: (token: string, d: Partial<OnboardingQuestion>) => apiFetch<OnboardingQuestion>("/admin/onboarding/questions/", { token, method: "POST", body: JSON.stringify(d) }),
+      update: (token: string, id: number, d: Partial<OnboardingQuestion>) => apiFetch<OnboardingQuestion>(`/admin/onboarding/questions/${id}/`, { token, method: "PUT", body: JSON.stringify(d) }),
+      delete: (token: string, id: number) => fetch(`${API_BASE}/admin/onboarding/questions/${id}/`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }).then(r => { if (!r.ok) throw new Error(); }),
+      patientAnswers: (token: string, patientId: number) => apiFetch<OnboardingAnswer[]>(`/admin/patients/${patientId}/onboarding/`, { token }),
+    },
     markAttendance: (token: string, patientId: number, attendanceStatus: "came" | "no_show", date?: string) =>
       apiFetch<{ id: number; status: "came" | "no_show"; date: string }>(
         `/admin/patients/${patientId}/attendance/`,
@@ -1449,6 +1481,10 @@ export const api = {
   },
   myDiets: {
     list: (token: string) => apiFetch<DietPlan[]>("/my-diets/", { token }),
+  },
+
+  measurements: {
+    list: (token: string) => apiFetch<BodyMeasurement[]>("/measurements/", { token }),
   },
 
   testimonials: { list: () => apiFetch<Testimonial[]>("/testimonials/") },

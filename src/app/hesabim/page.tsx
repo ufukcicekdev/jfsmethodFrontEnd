@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { PatientAppointmentsPanel } from "@/components/patient/PatientAppointmentsPanel";
 import { HomeExerciseList } from "@/components/patient/HomeExerciseList";
 import { WeightChart } from "@/components/admin/WeightChart";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -11,7 +10,6 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { getAccessToken } from "@/lib/auth";
 import {
   api,
-  type Appointment,
   type PatientProfile,
   type SessionPackage,
   type WellnessDashboard,
@@ -19,19 +17,9 @@ import {
 import { calculateBMI, getBMICategory } from "@/lib/bmi";
 import { buildWeightStats } from "@/lib/weightStats";
 
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("tr-TR", {
-    day: "2-digit",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export default function PatientDashboardPage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<PatientProfile | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [packages, setPackages] = useState<SessionPackage[]>([]);
   const [wellness, setWellness] = useState<WellnessDashboard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,15 +28,13 @@ export default function PatientDashboardPage() {
     const token = getAccessToken();
     if (!token) return;
 
-    const [profileData, appointmentData, packageData, wellnessData] =
+    const [profileData, packageData, wellnessData] =
       await Promise.all([
         api.profile.get(token),
-        api.appointments.list(token).catch(() => [] as Appointment[]),
         api.packages.me(token).catch(() => [] as SessionPackage[]),
         api.wellness.dashboard(token).catch(() => null),
       ]);
     setProfile(profileData);
-    setAppointments(Array.isArray(appointmentData) ? appointmentData : []);
     setPackages(Array.isArray(packageData) ? packageData : []);
     setWellness(wellnessData);
   }, []);
@@ -69,18 +55,6 @@ export default function PatientDashboardPage() {
   };
 
   const activePackage = packages.find((p) => p.is_active) ?? null;
-
-  const upcoming = appointments
-    .filter(
-      (a) =>
-        (a.status === "pending" || a.status === "approved") &&
-        new Date(a.appointment_datetime) >= new Date()
-    )
-    .sort(
-      (a, b) =>
-        new Date(a.appointment_datetime).getTime() -
-        new Date(b.appointment_datetime).getTime()
-    )[0];
 
   const profileComplete =
     profile && profile.height && profile.weight && profile.phone;
@@ -122,16 +96,10 @@ export default function PatientDashboardPage() {
             Merhaba, {user?.first_name || user?.full_name}! 👋
           </h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            Tedavi yolculuğunuz tek ekranda — ev programınız, ikiziniz ve
-            randevularınız.
+            Tedavi yolculuğunuz tek ekranda — ev programınız, ölçümleriniz ve
+            dijital ikiziniz.
           </p>
         </div>
-        <Link
-          href="/hesabim/randevular"
-          className="shrink-0 rounded-full bg-blue-500 px-5 py-2.5 text-center text-sm font-semibold text-white shadow-md hover:bg-blue-600"
-        >
-          + Yeni Randevu
-        </Link>
       </div>
 
       {!profileComplete && (
@@ -153,27 +121,7 @@ export default function PatientDashboardPage() {
       )}
 
       {/* Özet kartları */}
-      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
-        <GlassCard className="p-4 sm:p-5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Sonraki Randevu
-          </p>
-          {upcoming ? (
-            <>
-              <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {formatDateTime(upcoming.appointment_datetime)}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Dr. {upcoming.doctor_name}
-              </p>
-            </>
-          ) : (
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              Planlı randevu yok
-            </p>
-          )}
-        </GlassCard>
-
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
         <GlassCard className="p-4 sm:p-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Aktif Egzersiz
@@ -313,38 +261,32 @@ export default function PatientDashboardPage() {
         </GlassCard>
       </div>
 
-      {/* Kilo trendi + randevular */}
-      <div className="grid gap-4 sm:gap-6 xl:grid-cols-2">
-        {weightStats && weightStats.history.length >= 2 ? (
-          <GlassCard className="p-4 sm:p-6">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
-              Kilo Trendi
-            </h2>
-            <div className="mt-4">
-              <WeightChart stats={weightStats} />
-            </div>
-          </GlassCard>
-        ) : (
-          <GlassCard className="flex flex-col justify-center p-4 sm:p-6">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
-              Kilo Trendi
-            </h2>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              En az iki kilo ölçümü girince trend grafiğiniz burada görünecek.
-            </p>
-            <Link
-              href="/hesabim/profil"
-              className="mt-3 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
-            >
-              Kilo ekle →
-            </Link>
-          </GlassCard>
-        )}
-
-        <div>
-          <PatientAppointmentsPanel compact />
-        </div>
-      </div>
+      {/* Kilo trendi */}
+      {weightStats && weightStats.history.length >= 2 ? (
+        <GlassCard className="p-4 sm:p-6">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+            Kilo Trendi
+          </h2>
+          <div className="mt-4">
+            <WeightChart stats={weightStats} />
+          </div>
+        </GlassCard>
+      ) : (
+        <GlassCard className="flex flex-col justify-center p-4 sm:p-6">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+            Kilo Trendi
+          </h2>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            En az iki kilo ölçümü girince trend grafiğiniz burada görünecek.
+          </p>
+          <Link
+            href="/hesabim/profil"
+            className="mt-3 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+          >
+            Kilo ekle →
+          </Link>
+        </GlassCard>
+      )}
     </div>
   );
 }
