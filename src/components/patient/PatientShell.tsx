@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { href: "/hesabim/dijital-ikiz", label: "Tedavi İkizi", exact: false },
   { href: "/hesabim/olcumler", label: "Ölçümlerim", exact: false },
   { href: "/hesabim/bildirimler", label: "Bildirimler", exact: false },
+  { href: "/hesabim/rapor", label: "Raporum", exact: false },
   { href: "/hesabim/ayarlar", label: "Ayarlar", exact: false },
 ];
 

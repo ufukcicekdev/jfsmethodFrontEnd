@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { getAccessToken } from "@/lib/auth";
 import { api, type BodyMeasurement } from "@/lib/api";
@@ -89,7 +89,7 @@ function BodyWithLabels({ values, prevValues }: { values: MRecord; prevValues?: 
     );
   }
   return (
-    <svg viewBox="5 0 198 220" className="w-full select-none">
+    <svg viewBox="-30 0 260 230" className="w-full select-none">
       <BodyShape />
       {values.weight != null && (
         <text x="103" y="8" textAnchor="middle" fontSize="7" fontWeight="700" fill="#059669">
@@ -127,11 +127,113 @@ const EXTRA_FIELDS = [
   { key: "basen",     label: "Basen",     unit: "cm" },
 ];
 
+const TREND_METRICS = [
+  { key: "weight",    label: "Kilo",      unit: "kg" },
+  { key: "bel",       label: "Bel",       unit: "cm" },
+  { key: "kalca",     label: "Kalça",     unit: "cm" },
+  { key: "gogus",     label: "Göğüs",     unit: "cm" },
+  { key: "yag_orani", label: "Yağ %",     unit: "%"  },
+];
+
+function MeasurementTrendChart({
+  measurements,
+  metricKey,
+  unit,
+}: {
+  measurements: BodyMeasurement[];
+  metricKey: string;
+  unit: string;
+}) {
+  const points = useMemo(() => {
+    return [...measurements]
+      .reverse()
+      .map((m) => ({
+        date: m.date,
+        label: m.label,
+        value: numVal((m as unknown as Record<string, unknown>)[metricKey]),
+      }))
+      .filter((p) => p.value != null) as { date: string; label: string; value: number }[];
+  }, [measurements, metricKey]);
+
+  if (points.length < 2) {
+    return (
+      <p className="py-8 text-center text-sm text-slate-400 dark:text-slate-500">
+        Grafik için en az 2 ölçüm kaydı gerekir.
+      </p>
+    );
+  }
+
+  const values = points.map((p) => p.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const W = 600;
+  const H = 180;
+  const PAD = 32;
+
+  const pts = points.map((p, i) => ({
+    x: PAD + (i / (points.length - 1)) * (W - PAD * 2),
+    y: H - PAD - ((p.value - min) / range) * (H - PAD * 2),
+    ...p,
+  }));
+
+  const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+  const areaPath = `${linePath} L ${pts[pts.length - 1].x} ${H - PAD} L ${pts[0].x} ${H - PAD} Z`;
+  const last = pts[pts.length - 1];
+
+  return (
+    <div className="overflow-x-auto">
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full min-w-[280px]">
+        <defs>
+          <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#10b981" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        {/* Yatay kılavuz çizgileri */}
+        {[0, 0.5, 1].map((t) => {
+          const y = H - PAD - t * (H - PAD * 2);
+          const val = (min + t * range).toFixed(1);
+          return (
+            <g key={t}>
+              <line x1={PAD} y1={y} x2={W - PAD} y2={y} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 3" />
+              <text x={PAD - 4} y={y + 4} textAnchor="end" fontSize="10" fill="#94a3b8">{val}</text>
+            </g>
+          );
+        })}
+        {/* Alan */}
+        <path d={areaPath} fill="url(#trendGrad)" />
+        {/* Çizgi */}
+        <path d={linePath} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Noktalar */}
+        {pts.map((p, i) => (
+          <g key={i}>
+            <circle cx={p.x} cy={p.y} r="4" fill="#10b981" />
+            <circle cx={p.x} cy={p.y} r="7" fill="#10b981" fillOpacity="0.12" />
+          </g>
+        ))}
+        {/* Son değer balonu */}
+        <rect x={last.x - 28} y={last.y - 22} width="56" height="18" rx="9" fill="#10b981" />
+        <text x={last.x} y={last.y - 10} textAnchor="middle" fontSize="11" fontWeight="700" fill="white">
+          {last.value} {unit}
+        </text>
+        {/* X ekseni tarihleri */}
+        {pts.map((p, i) => (
+          <text key={i} x={p.x} y={H - 4} textAnchor="middle" fontSize="9" fill="#94a3b8">
+            {new Date(p.date).toLocaleDateString("tr-TR", { day: "numeric", month: "short" })}
+          </text>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 export default function OlcumlerPage() {
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const [trendMetric, setTrendMetric] = useState("weight");
 
   useEffect(() => {
     const token = getAccessToken();
@@ -215,6 +317,36 @@ export default function OlcumlerPage() {
                   </button>
                 ))}
               </div>
+            )}
+
+            {/* Trend grafiği */}
+            {measurements.length >= 2 && (
+              <GlassCard className="p-5 no-print">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Trend Grafiği</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {TREND_METRICS.map((m) => (
+                      <button
+                        key={m.key}
+                        type="button"
+                        onClick={() => setTrendMetric(m.key)}
+                        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                          trendMetric === m.key
+                            ? "bg-emerald-500 text-white"
+                            : "border border-slate-200 bg-white/70 text-slate-600 hover:bg-white dark:border-slate-600 dark:bg-slate-800/70 dark:text-slate-300"
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <MeasurementTrendChart
+                  measurements={measurements}
+                  metricKey={trendMetric}
+                  unit={TREND_METRICS.find((m) => m.key === trendMetric)?.unit ?? ""}
+                />
+              </GlassCard>
             )}
 
             <div className="grid gap-6 lg:grid-cols-2">
