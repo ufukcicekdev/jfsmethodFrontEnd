@@ -193,7 +193,7 @@ function BodyWithLabels({
     );
   }
   return (
-    <svg viewBox="5 0 198 220" className="w-full select-none">
+    <svg viewBox="-30 0 260 230" className="w-full select-none">
       <BodyShape />
       {values.weight != null && (
         <text x="103" y="8" textAnchor="middle" fontSize="7" fontWeight="700" fill="#059669">

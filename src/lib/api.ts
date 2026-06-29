@@ -94,6 +94,11 @@ export interface PatientProfile {
   weight: number | null;
   date_of_birth?: string | null;
   phone?: string;
+  target_weight?: number | null;
+  target_waist?: number | null;
+  target_hip?: number | null;
+  target_chest?: number | null;
+  target_body_fat?: number | null;
   updated_at?: string;
 }
 
@@ -269,6 +274,8 @@ export interface AdminDashboard {
   pending_appointments: number;
   today_appointments: number;
   active_packages: number;
+  weekly_attendance: { week_start: string; count: number }[];
+  top_exercises: { title: string; count: number }[];
 }
 
 export type PhotoCategory =
@@ -605,9 +612,20 @@ export interface ExerciseAssignment {
   created_at: string;
 }
 
+export interface Badge {
+  id: string;
+  label: string;
+  emoji: string;
+  desc: string;
+  earned: boolean;
+}
+
 export interface WellnessStats {
   active_exercises: number;
   completions_this_week: number;
+  total_completions: number;
+  exercise_streak: number;
+  badges: Badge[];
   average_pain: number | null;
   pain_change_week: number | null;
   weight_change_recent: number | null;
@@ -826,6 +844,28 @@ export const api = {
 
     progressPhotos: (token: string) =>
       apiFetch<PatientProgressPhoto[]>("/wellness/progress-photos/", { token }),
+
+    water: {
+      get: (token: string) =>
+        apiFetch<{ date: string; ml_consumed: number }>("/wellness/water/", { token }),
+      set: (token: string, ml_consumed: number) =>
+        apiFetch<{ date: string; ml_consumed: number }>("/wellness/water/", {
+          method: "POST",
+          body: JSON.stringify({ ml_consumed }),
+          token,
+        }),
+    },
+
+    steps: {
+      get: (token: string) =>
+        apiFetch<{ date: string; step_count: number }>("/wellness/steps/", { token }),
+      set: (token: string, step_count: number) =>
+        apiFetch<{ date: string; step_count: number }>("/wellness/steps/", {
+          method: "POST",
+          body: JSON.stringify({ step_count }),
+          token,
+        }),
+    },
   },
 
   admin: {

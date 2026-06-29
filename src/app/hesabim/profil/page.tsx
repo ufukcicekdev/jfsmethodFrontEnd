@@ -40,6 +40,14 @@ export default function PatientProfilePage() {
     date_of_birth: "",
     phone: "",
   });
+  const [goals, setGoals] = useState({
+    target_weight: "",
+    target_waist: "",
+    target_hip: "",
+    target_chest: "",
+    target_body_fat: "",
+  });
+  const [savingGoals, setSavingGoals] = useState(false);
 
   const loadData = async () => {
     const token = getAccessToken();
@@ -59,6 +67,13 @@ export default function PatientProfilePage() {
         date_of_birth: profileData.date_of_birth ?? "",
         phone: profileData.phone ?? "",
       });
+      setGoals({
+        target_weight: profileData.target_weight?.toString() ?? "",
+        target_waist: profileData.target_waist?.toString() ?? "",
+        target_hip: profileData.target_hip?.toString() ?? "",
+        target_chest: profileData.target_chest?.toString() ?? "",
+        target_body_fat: profileData.target_body_fat?.toString() ?? "",
+      });
     } catch {
       setError("Profil bilgileri yüklenemedi.");
     } finally {
@@ -69,6 +84,30 @@ export default function PatientProfilePage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleSaveGoals = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = getAccessToken();
+    if (!token) return;
+    setSavingGoals(true);
+    setError("");
+    setSuccess("");
+    try {
+      const updated = await api.profile.update(token, {
+        target_weight: goals.target_weight ? Number(goals.target_weight) : null,
+        target_waist: goals.target_waist ? Number(goals.target_waist) : null,
+        target_hip: goals.target_hip ? Number(goals.target_hip) : null,
+        target_chest: goals.target_chest ? Number(goals.target_chest) : null,
+        target_body_fat: goals.target_body_fat ? Number(goals.target_body_fat) : null,
+      });
+      setProfile(updated);
+      setSuccess("Hedefler güncellendi.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kayıt başarısız.");
+    } finally {
+      setSavingGoals(false);
+    }
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -314,6 +353,76 @@ export default function PatientProfilePage() {
           )}
         </GlassCard>
       </div>
+
+      <GlassCard className="p-4 sm:p-6">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+          Hedeflerim
+        </h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Hedef değerler ölçüm grafiklerinde gösterilir.
+        </p>
+        <form onSubmit={handleSaveGoals} className="mt-4 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <FormField
+              label="Hedef Kilo (kg)"
+              name="target_weight"
+              type="number"
+              min={30}
+              max={300}
+              step="0.1"
+              value={goals.target_weight}
+              onChange={(e) => setGoals((g) => ({ ...g, target_weight: e.target.value }))}
+            />
+            <FormField
+              label="Hedef Bel (cm)"
+              name="target_waist"
+              type="number"
+              min={40}
+              max={200}
+              step="0.1"
+              value={goals.target_waist}
+              onChange={(e) => setGoals((g) => ({ ...g, target_waist: e.target.value }))}
+            />
+            <FormField
+              label="Hedef Kalça (cm)"
+              name="target_hip"
+              type="number"
+              min={40}
+              max={200}
+              step="0.1"
+              value={goals.target_hip}
+              onChange={(e) => setGoals((g) => ({ ...g, target_hip: e.target.value }))}
+            />
+            <FormField
+              label="Hedef Göğüs (cm)"
+              name="target_chest"
+              type="number"
+              min={40}
+              max={200}
+              step="0.1"
+              value={goals.target_chest}
+              onChange={(e) => setGoals((g) => ({ ...g, target_chest: e.target.value }))}
+            />
+            <FormField
+              label="Hedef Yağ Oranı (%)"
+              name="target_body_fat"
+              type="number"
+              min={1}
+              max={60}
+              step="0.1"
+              value={goals.target_body_fat}
+              onChange={(e) => setGoals((g) => ({ ...g, target_body_fat: e.target.value }))}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={savingGoals}
+            className="w-full rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-50 sm:w-auto"
+          >
+            {savingGoals ? "Kaydediliyor…" : "Hedefleri Kaydet"}
+          </button>
+        </form>
+      </GlassCard>
 
       <GlassCard className="p-4 sm:p-6">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">

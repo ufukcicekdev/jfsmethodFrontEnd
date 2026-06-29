@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { getAccessToken } from "@/lib/auth";
-import { api, type BodyMeasurement } from "@/lib/api";
+import { api, type BodyMeasurement, type PatientProfile } from "@/lib/api";
 
 /* ─── SVG body path ─────────────────────────────────────── */
 const BODY_PATH =
@@ -139,10 +139,12 @@ function MeasurementTrendChart({
   measurements,
   metricKey,
   unit,
+  goalValue,
 }: {
   measurements: BodyMeasurement[];
   metricKey: string;
   unit: string;
+  goalValue?: number | null;
 }) {
   const points = useMemo(() => {
     return [...measurements]
@@ -164,8 +166,9 @@ function MeasurementTrendChart({
   }
 
   const values = points.map((p) => p.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  const allVals = goalValue != null ? [...values, goalValue] : values;
+  const min = Math.min(...allVals);
+  const max = Math.max(...allVals);
   const range = max - min || 1;
   const W = 600;
   const H = 180;
@@ -201,6 +204,16 @@ function MeasurementTrendChart({
             </g>
           );
         })}
+        {/* Hedef çizgisi */}
+        {goalValue != null && (() => {
+          const gy = H - PAD - ((goalValue - min) / range) * (H - PAD * 2);
+          return (
+            <g>
+              <line x1={PAD} y1={gy} x2={W - PAD} y2={gy} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="6 4" />
+              <text x={W - PAD + 4} y={gy + 4} fontSize="9" fill="#f59e0b">Hedef {goalValue}{unit}</text>
+            </g>
+          );
+        })()}
         {/* Alan */}
         <path d={areaPath} fill="url(#trendGrad)" />
         {/* Çizgi */}
@@ -228,8 +241,17 @@ function MeasurementTrendChart({
   );
 }
 
+const METRIC_TO_GOAL: Record<string, keyof PatientProfile> = {
+  weight: "target_weight",
+  bel: "target_waist",
+  kalca: "target_hip",
+  gogus: "target_chest",
+  yag_orani: "target_body_fat",
+};
+
 export default function OlcumlerPage() {
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
+  const [profile, setProfile] = useState<PatientProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -238,10 +260,10 @@ export default function OlcumlerPage() {
   useEffect(() => {
     const token = getAccessToken();
     if (!token) return;
-    api.measurements
-      .list(token)
-      .then((data) => {
+    Promise.all([api.measurements.list(token), api.profile.get(token)])
+      .then(([data, profileData]) => {
         setMeasurements(data);
+        setProfile(profileData);
         setSelectedIdx(0);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Yüklenemedi."))
@@ -345,6 +367,7 @@ export default function OlcumlerPage() {
                   measurements={measurements}
                   metricKey={trendMetric}
                   unit={TREND_METRICS.find((m) => m.key === trendMetric)?.unit ?? ""}
+                  goalValue={profile ? (profile[METRIC_TO_GOAL[trendMetric]] as number | null | undefined) : null}
                 />
               </GlassCard>
             )}

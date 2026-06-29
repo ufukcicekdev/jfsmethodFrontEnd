@@ -97,6 +97,80 @@ export default function PanelDashboardPage() {
               </Link>
             </div>
           </GlassCard>
+
+          {/* Analitik */}
+          <div className="grid gap-4 sm:gap-6 xl:grid-cols-2">
+            {/* Haftalık katılım */}
+            <GlassCard className="p-4 sm:p-6">
+              <h2 className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-50">
+                Haftalık Egzersiz Katılımı
+              </h2>
+              {stats?.weekly_attendance && stats.weekly_attendance.length > 0 ? (() => {
+                const data = stats.weekly_attendance;
+                const maxCount = Math.max(...data.map((d) => d.count), 1);
+                const W = 560;
+                const H = 140;
+                const PAD = 24;
+                const barW = (W - PAD * 2) / data.length - 4;
+                return (
+                  <div className="overflow-x-auto">
+                    <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full min-w-[280px]">
+                      {data.map((d, i) => {
+                        const barH = (d.count / maxCount) * (H - PAD * 2);
+                        const x = PAD + i * ((W - PAD * 2) / data.length) + 2;
+                        const y = H - PAD - barH;
+                        const weekLabel = new Date(d.week_start).toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
+                        return (
+                          <g key={i}>
+                            <rect x={x} y={y} width={barW} height={Math.max(barH, 2)} rx="4"
+                              fill={i === data.length - 1 ? "#3b82f6" : "#93c5fd"} />
+                            {d.count > 0 && (
+                              <text x={x + barW / 2} y={y - 4} textAnchor="middle" fontSize="10" fontWeight="700" fill="#3b82f6">
+                                {d.count}
+                              </text>
+                            )}
+                            <text x={x + barW / 2} y={H - 6} textAnchor="middle" fontSize="8" fill="#94a3b8">
+                              {weekLabel}
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </svg>
+                  </div>
+                );
+              })() : (
+                <p className="py-8 text-center text-sm text-slate-400">Henüz veri yok.</p>
+              )}
+            </GlassCard>
+
+            {/* En popüler egzersizler */}
+            <GlassCard className="p-4 sm:p-6">
+              <h2 className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-50">
+                En Çok Tamamlanan Egzersizler (Son 30 Gün)
+              </h2>
+              {stats?.top_exercises && stats.top_exercises.length > 0 ? (
+                <div className="space-y-3">
+                  {stats.top_exercises.map((ex, i) => {
+                    const maxCount = stats.top_exercises[0]?.count || 1;
+                    const pct = Math.round((ex.count / maxCount) * 100);
+                    return (
+                      <div key={i}>
+                        <div className="mb-1 flex items-center justify-between">
+                          <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{ex.title}</p>
+                          <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{ex.count}</p>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+                          <div className="h-full rounded-full bg-blue-500 transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="py-8 text-center text-sm text-slate-400">Son 30 günde tamamlanan egzersiz yok.</p>
+              )}
+            </GlassCard>
+          </div>
         </>
       )}
     </div>

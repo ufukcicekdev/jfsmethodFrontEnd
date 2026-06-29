@@ -23,26 +23,56 @@ export default function PatientDashboardPage() {
   const [packages, setPackages] = useState<SessionPackage[]>([]);
   const [wellness, setWellness] = useState<WellnessDashboard | null>(null);
   const [loading, setLoading] = useState(true);
+  const [waterMl, setWaterMl] = useState(0);
+  const [steps, setSteps] = useState(0);
+  const [stepsInput, setStepsInput] = useState("");
+  const [savingSteps, setSavingSteps] = useState(false);
 
   const loadAll = useCallback(async () => {
     const token = getAccessToken();
     if (!token) return;
 
-    const [profileData, packageData, wellnessData] =
+    const [profileData, packageData, wellnessData, waterData, stepsData] =
       await Promise.all([
         api.profile.get(token),
         api.packages.me(token).catch(() => [] as SessionPackage[]),
         api.wellness.dashboard(token).catch(() => null),
+        api.wellness.water.get(token).catch(() => ({ date: "", ml_consumed: 0 })),
+        api.wellness.steps.get(token).catch(() => ({ date: "", step_count: 0 })),
       ]);
     setProfile(profileData);
     setPackages(Array.isArray(packageData) ? packageData : []);
     setWellness(wellnessData);
+    setWaterMl(waterData.ml_consumed);
+    setSteps(stepsData.step_count);
+    setStepsInput(stepsData.step_count > 0 ? String(stepsData.step_count) : "");
   }, []);
 
   useEffect(() => {
     setLoading(true);
     loadAll().finally(() => setLoading(false));
   }, [loadAll]);
+
+  const handleAddWater = async (ml: number) => {
+    const token = getAccessToken();
+    if (!token) return;
+    const newMl = Math.max(0, waterMl + ml);
+    setWaterMl(newMl);
+    await api.wellness.water.set(token, newMl).catch(() => {});
+  };
+
+  const handleSaveSteps = async () => {
+    const token = getAccessToken();
+    const count = parseInt(stepsInput, 10);
+    if (!token || isNaN(count)) return;
+    setSavingSteps(true);
+    try {
+      await api.wellness.steps.set(token, count);
+      setSteps(count);
+    } finally {
+      setSavingSteps(false);
+    }
+  };
 
   const handleCompleteExercise = async (
     assignmentId: number,
@@ -258,6 +288,125 @@ export default function PatientDashboardPage() {
               bare
             />
           </div>
+        </GlassCard>
+      </div>
+
+      {/* Su & Adım + Rozetler */}
+      <div className="grid gap-4 sm:gap-6 xl:grid-cols-2">
+        {/* Su & Adım */}
+        <GlassCard className="p-4 sm:p-6">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">Günlük Takip</h2>
+          <div className="mt-4 space-y-5">
+            {/* Su */}
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Su Tüketimi</p>
+                <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                  {waterMl} <span className="font-normal text-slate-400">/ 2000 ml</span>
+                </p>
+              </div>
+              {/* Circular progress */}
+              <div className="relative mx-auto mb-3 h-20 w-20">
+                <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e2e8f0" strokeWidth="2.5" />
+                  <circle
+                    cx="18" cy="18" r="15.9" fill="none"
+                    stroke="#3b82f6" strokeWidth="2.5"
+                    strokeDasharray={`${Math.min(100, Math.round(waterMl / 20))} 100`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-xs font-bold text-blue-600">{Math.min(100, Math.round(waterMl / 20))}%</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[250, 500, 750, 1000].map((ml) => (
+                  <button
+                    key={ml}
+                    type="button"
+                    onClick={() => handleAddWater(ml)}
+                    className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 dark:border-blue-700/50 dark:bg-blue-950/30 dark:text-blue-300"
+                  >
+                    +{ml}ml
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => handleAddWater(-waterMl)}
+                  className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800/70 dark:text-slate-400"
+                >
+                  Sıfırla
+                </button>
+              </div>
+            </div>
+
+            {/* Adım */}
+            <div>
+              <p className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">Adım Sayısı</p>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Adım sayısı girin"
+                  value={stepsInput}
+                  onChange={(e) => setStepsInput(e.target.value)}
+                  className="flex-1 rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 dark:border-slate-600 dark:bg-slate-800/80 dark:text-slate-100"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveSteps}
+                  disabled={savingSteps}
+                  className="rounded-xl bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-900 disabled:opacity-50 dark:bg-slate-700"
+                >
+                  {savingSteps ? "…" : "Kaydet"}
+                </button>
+              </div>
+              {steps > 0 && (
+                <p className="mt-1.5 text-xs text-slate-500">
+                  Bugün: <span className="font-semibold text-slate-800 dark:text-slate-200">{steps.toLocaleString("tr-TR")} adım</span>
+                </p>
+              )}
+            </div>
+          </div>
+        </GlassCard>
+
+        {/* Rozetler & Streak */}
+        <GlassCard className="p-4 sm:p-6">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">Motivasyon</h2>
+          {wellness?.stats.exercise_streak != null && wellness.stats.exercise_streak > 0 && (
+            <div className="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-3 dark:bg-amber-950/20">
+              <span className="text-2xl">🔥</span>
+              <div>
+                <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
+                  {wellness.stats.exercise_streak} günlük seri!
+                </p>
+                <p className="text-xs text-amber-700/70 dark:text-amber-400/70">Harika gidiyorsun, devam et!</p>
+              </div>
+            </div>
+          )}
+          {wellness?.stats.badges && wellness.stats.badges.length > 0 ? (
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {wellness.stats.badges.map((badge) => (
+                <div
+                  key={badge.id}
+                  className={`rounded-xl p-3 text-center transition-all ${
+                    badge.earned
+                      ? "bg-blue-50 dark:bg-blue-950/30"
+                      : "bg-slate-50 opacity-50 grayscale dark:bg-slate-800/40"
+                  }`}
+                >
+                  <p className="text-2xl">{badge.emoji}</p>
+                  <p className={`mt-1 text-xs font-semibold ${badge.earned ? "text-blue-700 dark:text-blue-300" : "text-slate-500"}`}>
+                    {badge.label}
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-slate-400">{badge.desc}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-slate-500">Egzersiz tamamlayarak rozetler kazanabilirsin.</p>
+          )}
         </GlassCard>
       </div>
 
