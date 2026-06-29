@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { getAccessToken } from "@/lib/auth";
@@ -144,10 +145,17 @@ export function PushNotificationManager() {
                 >
                   İzin ver
                 </button>
+                <Link
+                  href="/hesabim/ayarlar"
+                  onClick={handleDismiss}
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  Ayarlardan yönet
+                </Link>
                 <button
                   type="button"
                   onClick={handleDismiss}
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
                 >
                   Daha sonra
                 </button>
