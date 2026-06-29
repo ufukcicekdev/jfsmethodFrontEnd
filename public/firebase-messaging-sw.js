@@ -41,19 +41,23 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const link = (event.notification.data && event.notification.data.link) || "/";
+  const link = (event.notification.data && event.notification.data.link) || "/hesabim";
+  const targetUrl = link.startsWith("http") ? link : self.location.origin + link;
+
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientList) => {
+        // Zaten açık pencere varsa navigate et ve öne getir
         for (const client of clientList) {
-          if ("focus" in client) {
-            client.navigate(link);
+          if (client.url.startsWith(self.location.origin) && "focus" in client) {
+            client.navigate(targetUrl);
             return client.focus();
           }
         }
+        // Açık pencere yoksa yeni aç
         if (self.clients.openWindow) {
-          return self.clients.openWindow(link);
+          return self.clients.openWindow(targetUrl);
         }
       })
   );

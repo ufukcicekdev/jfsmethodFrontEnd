@@ -169,7 +169,11 @@ export function PushNotificationManager() {
         <button
           type="button"
           onClick={() => {
-            if (toast.link) window.location.href = toast.link;
+            if (toast.link) {
+              window.location.href = toast.link.startsWith("http")
+                ? toast.link
+                : toast.link;
+            }
             setToast(null);
           }}
           className="fixed inset-x-4 top-4 z-70 mx-auto block max-w-md rounded-2xl border border-slate-200/70 bg-white/95 p-4 text-left shadow-xl shadow-slate-300/40 backdrop-blur-xl sm:left-auto sm:right-4 sm:mx-0 dark:border-slate-700/60 dark:bg-slate-900/95 dark:shadow-black/40"

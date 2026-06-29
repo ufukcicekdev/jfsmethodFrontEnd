@@ -212,11 +212,11 @@ export function PatientNotificationBell() {
 
           <div className="border-t border-slate-200/80 px-4 py-2.5 dark:border-slate-700/50">
             <Link
-              href="/hesabim/randevular"
+              href="/hesabim/bildirimler"
               onClick={() => setOpen(false)}
               className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
             >
-              Randevulara git →
+              Tüm bildirimleri gör →
             </Link>
           </div>
         </div>
