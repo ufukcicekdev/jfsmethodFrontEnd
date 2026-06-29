@@ -53,6 +53,25 @@ export default function PatientDashboardPage() {
     loadAll().finally(() => setLoading(false));
   }, [loadAll]);
 
+  // Kullanıcı henüz bildirim izni vermediyse sessizce iste ve token'ı kaydet
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (Notification.permission !== "default") return;
+    const token = getAccessToken();
+    if (!token) return;
+
+    import("@/lib/firebase/messaging").then(({ isFirebaseConfigured, requestPushToken }) => {
+      if (!isFirebaseConfigured()) return;
+      requestPushToken().then((fcmToken) => {
+        if (fcmToken) {
+          import("@/lib/api").then(({ api }) => {
+            api.devices.register(token, fcmToken).catch(() => {});
+          });
+        }
+      });
+    });
+  }, []);
+
   const handleAddWater = async (ml: number) => {
     const token = getAccessToken();
     if (!token) return;
