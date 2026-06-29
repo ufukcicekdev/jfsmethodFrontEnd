@@ -64,7 +64,7 @@ export function HomeExerciseList({
       </div>
     ) : (
       <div className="grid gap-4 sm:grid-cols-2">
-        {active.map((assignment) => {
+        {active.filter((a) => a.exercise).map((assignment) => {
           const { exercise } = assignment;
           const progress = weeklyProgress(assignment);
 
