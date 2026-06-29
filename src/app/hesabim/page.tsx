@@ -53,10 +53,10 @@ export default function PatientDashboardPage() {
     loadAll().finally(() => setLoading(false));
   }, [loadAll]);
 
-  // Kullanıcı henüz bildirim izni vermediyse sessizce iste ve token'ı kaydet
+  // Bildirim izni granted ya da default ise FCM token'ı al ve backend'e kaydet
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (Notification.permission !== "default") return;
+    if (Notification.permission === "denied") return;
     const token = getAccessToken();
     if (!token) return;
 
