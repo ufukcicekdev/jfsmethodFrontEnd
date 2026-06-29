@@ -202,14 +202,6 @@ export default function BildirimZamanlamaPage() {
         </button>
       </div>
 
-      {/* Railway Cron Hatırlatması */}
-      <GlassCard className="border-amber-200/60 bg-amber-50/50 p-4 dark:border-amber-800/40 dark:bg-amber-950/20">
-        <p className="text-sm font-medium text-amber-900 dark:text-amber-200">⚙️ Railway Cron Servisi Gerekli</p>
-        <p className="mt-1 text-xs text-amber-800/80 dark:text-amber-300/80">
-          Bildirimlerin otomatik gönderilmesi için Railway Dashboard'da Cron Service ekleyin:
-          <code className="ml-1 rounded bg-amber-200/60 px-1 py-0.5 font-mono dark:bg-amber-900/40">*/10 * * * * → python manage.py fire_scheduled_notifications</code>
-        </p>
-      </GlassCard>
 
       {loading ? (
         <div className="flex justify-center py-16">
