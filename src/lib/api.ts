@@ -268,6 +268,22 @@ export interface PostponePayload {
   note: string;
 }
 
+export type NotificationScheduleType = "water" | "steps" | "exercise" | "custom";
+
+export interface NotificationSchedule {
+  id: number;
+  notification_type: NotificationScheduleType;
+  notification_type_label: string;
+  title: string;
+  message: string;
+  send_time: string; // "HH:MM:SS"
+  days_of_week: number[]; // [0-6]
+  is_enabled: boolean;
+  last_triggered_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AdminDashboard {
   patient_count: number;
   appointment_count: number;
@@ -1448,6 +1464,28 @@ export const api = {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       }).then((r) => { if (!r.ok) throw new Error("Silinemedi."); }),
+
+    notificationSchedules: {
+      list: (token: string) =>
+        apiFetch<NotificationSchedule[]>("/admin/notification-schedules/", { token }),
+      create: (token: string, data: Omit<NotificationSchedule, "id" | "notification_type_label" | "last_triggered_date" | "created_at" | "updated_at">) =>
+        apiFetch<NotificationSchedule>("/admin/notification-schedules/", {
+          token, method: "POST", body: JSON.stringify(data),
+        }),
+      update: (token: string, id: number, data: Partial<NotificationSchedule>) =>
+        apiFetch<NotificationSchedule>(`/admin/notification-schedules/${id}/`, {
+          token, method: "PATCH", body: JSON.stringify(data),
+        }),
+      delete: (token: string, id: number) =>
+        fetch(`${API_BASE}/admin/notification-schedules/${id}/`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }).then((r) => { if (!r.ok) throw new Error("Silinemedi."); }),
+      test: (token: string, id: number) =>
+        apiFetch<{ detail: string }>(`/admin/notification-schedules/${id}/test/`, {
+          token, method: "POST", body: JSON.stringify({}),
+        }),
+    },
 
     faqs: {
       list: (token: string) => apiFetch<Faq[]>("/admin/faqs/", { token }),
