@@ -99,6 +99,7 @@ export interface PatientProfile {
   target_hip?: number | null;
   target_chest?: number | null;
   target_body_fat?: number | null;
+  daily_water_goal_ml?: number;
   updated_at?: string;
 }
 

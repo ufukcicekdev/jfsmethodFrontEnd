@@ -46,6 +46,7 @@ export default function PatientProfilePage() {
     target_hip: "",
     target_chest: "",
     target_body_fat: "",
+    daily_water_goal_ml: "2000",
   });
   const [savingGoals, setSavingGoals] = useState(false);
 
@@ -73,6 +74,7 @@ export default function PatientProfilePage() {
         target_hip: profileData.target_hip?.toString() ?? "",
         target_chest: profileData.target_chest?.toString() ?? "",
         target_body_fat: profileData.target_body_fat?.toString() ?? "",
+        daily_water_goal_ml: profileData.daily_water_goal_ml?.toString() ?? "2000",
       });
     } catch {
       setError("Profil bilgileri yüklenemedi.");
@@ -99,6 +101,7 @@ export default function PatientProfilePage() {
         target_hip: goals.target_hip ? Number(goals.target_hip) : null,
         target_chest: goals.target_chest ? Number(goals.target_chest) : null,
         target_body_fat: goals.target_body_fat ? Number(goals.target_body_fat) : null,
+        daily_water_goal_ml: goals.daily_water_goal_ml ? Number(goals.daily_water_goal_ml) : 2000,
       });
       setProfile(updated);
       setSuccess("Hedefler güncellendi.");
@@ -412,6 +415,20 @@ export default function PatientProfilePage() {
               step="0.1"
               value={goals.target_body_fat}
               onChange={(e) => setGoals((g) => ({ ...g, target_body_fat: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Günlük Su Hedefi (ml)
+            </label>
+            <input
+              type="number"
+              min={500}
+              max={5000}
+              step={250}
+              value={goals.daily_water_goal_ml}
+              onChange={(e) => setGoals((g) => ({ ...g, daily_water_goal_ml: e.target.value }))}
+              className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 dark:border-slate-600 dark:bg-slate-800/80 dark:text-slate-100"
             />
           </div>
           <button
