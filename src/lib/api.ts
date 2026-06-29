@@ -276,10 +276,10 @@ export interface NotificationSchedule {
   notification_type_label: string;
   title: string;
   message: string;
-  send_time: string; // "HH:MM:SS"
+  send_times: string[]; // ["HH:MM", ...]
   days_of_week: number[]; // [0-6]
   is_enabled: boolean;
-  last_triggered_date: string | null;
+  last_triggered_times: Record<string, boolean>;
   created_at: string;
   updated_at: string;
 }
@@ -1468,7 +1468,7 @@ export const api = {
     notificationSchedules: {
       list: (token: string) =>
         apiFetch<NotificationSchedule[]>("/admin/notification-schedules/", { token }),
-      create: (token: string, data: Omit<NotificationSchedule, "id" | "notification_type_label" | "last_triggered_date" | "created_at" | "updated_at">) =>
+      create: (token: string, data: Omit<NotificationSchedule, "id" | "notification_type_label" | "last_triggered_times" | "created_at" | "updated_at">) =>
         apiFetch<NotificationSchedule>("/admin/notification-schedules/", {
           token, method: "POST", body: JSON.stringify(data),
         }),
