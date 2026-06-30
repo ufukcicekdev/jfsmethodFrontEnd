@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { DarkModeToggle } from "@/components/ui/DarkModeToggle";
 import { isStaffUser } from "@/lib/auth";
@@ -17,6 +17,28 @@ const NAV_LINKS = [
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, logout } = useAuth();
+  const deferredPrompt = useRef<any>(null);
+  const [installable, setInstallable] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      deferredPrompt.current = e;
+      setInstallable(true);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt.current) return;
+    deferredPrompt.current.prompt();
+    const { outcome } = await deferredPrompt.current.userChoice;
+    if (outcome === "accepted") {
+      setInstallable(false);
+      deferredPrompt.current = null;
+    }
+  };
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 pt-1">
@@ -40,6 +62,19 @@ export function Navbar() {
 
         <div className="flex items-center gap-2 sm:gap-3">
           <DarkModeToggle />
+
+          {installable && (
+            <button
+              type="button"
+              onClick={handleInstall}
+              className="hidden rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-600/25 transition-all hover:bg-emerald-700 sm:inline-flex items-center gap-1.5"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Uygulamayı İndir
+            </button>
+          )}
 
           {user && isStaffUser(user) && (
             <Link
@@ -114,6 +149,20 @@ export function Navbar() {
                 </a>
               </li>
             ))}
+            {installable && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => { handleInstall(); setMenuOpen(false); }}
+                  className="flex w-full items-center gap-2 py-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Uygulamayı İndir
+                </button>
+              </li>
+            )}
             <li className="border-t border-white/20 pt-3">
               {user ? (
                 <>
