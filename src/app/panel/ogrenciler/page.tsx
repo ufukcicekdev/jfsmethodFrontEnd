@@ -21,17 +21,18 @@ function formatDate(value: string | null) {
 function AttendanceBar({
   patientId,
   todayAttendance,
+  activePackages,
   onMarked,
 }: {
   patientId: number;
-  todayAttendance: { id: number; status: "came" | "no_show" } | null;
-  onMarked: (status: "came" | "no_show" | null) => void;
+  todayAttendance: { id: number; status: "came" | "no_show"; package_id?: number | null } | null;
+  activePackages: { id: number; name: string; remaining: number }[];
+  onMarked: (status: "came" | "no_show" | null, packageId?: number) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [pickingPackage, setPickingPackage] = useState(false);
 
-  const mark = async (s: "came" | "no_show", e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const doMark = async (s: "came" | "no_show", packageId?: number) => {
     const token = getAccessToken();
     if (!token || busy) return;
     setBusy(true);
@@ -40,12 +41,27 @@ function AttendanceBar({
         await api.admin.removeAttendance(token, patientId);
         onMarked(null);
       } else {
-        await api.admin.markAttendance(token, patientId, s);
-        onMarked(s);
+        await api.admin.markAttendance(token, patientId, s, undefined, packageId);
+        onMarked(s, packageId);
       }
     } finally {
       setBusy(false);
+      setPickingPackage(false);
     }
+  };
+
+  const handleCame = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (todayAttendance?.status === "came") { doMark("came"); return; }
+    if (activePackages.length > 1) { setPickingPackage(true); return; }
+    doMark("came", activePackages[0]?.id);
+  };
+
+  const handleNoShow = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    doMark("no_show");
   };
 
   const came = todayAttendance?.status === "came";
@@ -53,14 +69,14 @@ function AttendanceBar({
 
   return (
     <div
-      className="flex items-center gap-2 border-t border-slate-200/60 bg-slate-50/50 px-4 py-2.5 dark:border-slate-700/40 dark:bg-slate-800/20"
+      className="flex flex-wrap items-center gap-2 border-t border-slate-200/60 bg-slate-50/50 px-4 py-2.5 dark:border-slate-700/40 dark:bg-slate-800/20"
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
     >
       <span className="mr-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Bugün:</span>
       <button
         type="button"
         disabled={busy}
-        onClick={(e) => mark("came", e)}
+        onClick={handleCame}
         className={`rounded-full px-3 py-0.5 text-xs font-semibold transition-colors disabled:opacity-50 ${came ? "bg-emerald-500 text-white" : "border border-emerald-400/60 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"}`}
       >
         {busy && came ? "…" : "✓ Geldi"}
@@ -68,11 +84,34 @@ function AttendanceBar({
       <button
         type="button"
         disabled={busy}
-        onClick={(e) => mark("no_show", e)}
+        onClick={handleNoShow}
         className={`rounded-full px-3 py-0.5 text-xs font-semibold transition-colors disabled:opacity-50 ${noShow ? "bg-orange-500 text-white" : "border border-orange-400/60 text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950/30"}`}
       >
         {busy && noShow ? "…" : "✗ Gelmedi"}
       </button>
+
+      {pickingPackage && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-slate-500 dark:text-slate-400">Hangi paketten düşsün?</span>
+          {activePackages.map((pkg) => (
+            <button
+              key={pkg.id}
+              type="button"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); doMark("came", pkg.id); }}
+              className="rounded-full border border-blue-400/60 px-3 py-0.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30"
+            >
+              {pkg.name} ({pkg.remaining} kaldı)
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPickingPackage(false); }}
+            className="rounded-full px-2 py-0.5 text-xs text-slate-400 hover:text-slate-600"
+          >
+            iptal
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -239,6 +278,7 @@ export default function StudentsPage() {
                 <AttendanceBar
                   patientId={patient.id}
                   todayAttendance={patient.today_attendance}
+                  activePackages={patient.active_packages ?? []}
                   onMarked={(status) => handleMarked(patient.id, status)}
                 />
               </GlassCard>

@@ -321,13 +321,13 @@ export default function StudentDetailPage() {
       )}
 
       {activeTab === "onboarding" && (
-        <PatientOnboardingTab patientId={id} />
+        <PatientOnboardingTab patientId={id} completed={patient?.onboarding_completed ?? false} />
       )}
     </div>
   );
 }
 
-function PatientOnboardingTab({ patientId }: { patientId: number }) {
+function PatientOnboardingTab({ patientId, completed }: { patientId: number; completed: boolean }) {
   const [answers, setAnswers] = useState<import("@/lib/api").OnboardingAnswer[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -350,8 +350,13 @@ function PatientOnboardingTab({ patientId }: { patientId: number }) {
 
   if (answers.length === 0) {
     return (
-      <GlassCard className="p-8 text-center">
-        <p className="text-slate-500 dark:text-slate-400">Onboarding yanıtı bulunamadı.</p>
+      <GlassCard className="p-8 text-center space-y-2">
+        {!completed && (
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-500">
+            Öğrenci onboarding sürecini henüz tamamlamadı
+          </p>
+        )}
+        <p className="text-slate-500 dark:text-slate-400 text-sm">Onboarding yanıtı bulunamadı.</p>
       </GlassCard>
     );
   }

@@ -393,7 +393,8 @@ export interface AdminPatient {
   remaining_sessions: number;
   no_show_count: number;
   came_count: number;
-  today_attendance: { id: number; status: "came" | "no_show" } | null;
+  today_attendance: { id: number; status: "came" | "no_show"; package_id?: number | null } | null;
+  active_packages: { id: number; name: string; remaining: number }[];
   phone?: string;
   date_of_birth?: string | null;
   admin_notes?: string;
@@ -402,6 +403,7 @@ export interface AdminPatient {
   progress_photos?: PatientProgressPhoto[];
   packages?: SessionPackage[];
   attendance?: PatientAttendance;
+  onboarding_completed?: boolean;
 }
 
 export interface WeightStats {
@@ -1547,10 +1549,10 @@ export const api = {
       delete: (token: string, id: number) => fetch(`${API_BASE}/admin/onboarding/questions/${id}/`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }).then(r => { if (!r.ok) throw new Error(); }),
       patientAnswers: (token: string, patientId: number) => apiFetch<OnboardingAnswer[]>(`/admin/patients/${patientId}/onboarding/`, { token }),
     },
-    markAttendance: (token: string, patientId: number, attendanceStatus: "came" | "no_show", date?: string) =>
+    markAttendance: (token: string, patientId: number, attendanceStatus: "came" | "no_show", date?: string, packageId?: number) =>
       apiFetch<{ id: number; status: "came" | "no_show"; date: string }>(
         `/admin/patients/${patientId}/attendance/`,
-        { token, method: "POST", body: JSON.stringify({ status: attendanceStatus, date: date ?? new Date().toISOString().slice(0, 10) }) }
+        { token, method: "POST", body: JSON.stringify({ status: attendanceStatus, date: date ?? new Date().toISOString().slice(0, 10), package_id: packageId ?? null }) }
       ),
     removeAttendance: (token: string, patientId: number, date?: string) =>
       fetch(`${API_BASE}/admin/patients/${patientId}/attendance/?date=${date ?? new Date().toISOString().slice(0, 10)}`, {
