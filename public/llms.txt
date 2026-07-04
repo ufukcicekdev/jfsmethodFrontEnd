@@ -19,9 +19,38 @@ JFS Method, bireylerin ağrısız, sürdürülebilir ve bilimsel temelli bir har
 - Postür bozukluğu olan bireyler
 - Düzenli egzersiz programı isteyen herkes
 
-## Platform
+## Platform Özellikleri
 
-JFS Method, hasta paneli, randevu sistemi, egzersiz kütüphanesi ve vücut ölçüm takibini tek bir platformda sunan kapsamlı bir sağlık teknolojisi çözümüdür.
+JFS Method, aşağıdaki modülleri tek bir çatı altında sunan kapsamlı bir sağlık teknolojisi PWA'sıdır:
+
+- **Hasta Paneli**: Kişisel profil, boy/kilo takibi, vücut ölçümleri
+- **Randevu Sistemi**: Uygun seans saatlerini görüntüleme ve randevu oluşturma
+- **Egzersiz Kütüphanesi**: Fotoğraf ve video destekli kişisel egzersiz programları
+- **Bildirim Sistemi**: Randevu hatırlatıcıları ve erteleme bildirimleri (e-posta + push)
+- **İlerleme Takibi**: Grafik destekli kilo ve ölçüm geçmişi
+
+## Teknoloji
+
+- **Frontend**: Next.js (App Router), TypeScript, Tailwind CSS, PWA (Service Worker)
+- **Backend**: Django REST Framework, JWT kimlik doğrulama
+- **Veritabanı**: Firebase / PostgreSQL
+- **Bildirimler**: SMTP e-posta, Firebase Cloud Messaging (FCM) push bildirimleri
+
+## API Uç Noktaları
+
+| Yöntem | Endpoint | Erişim | Açıklama |
+|--------|----------|--------|----------|
+| POST | `/api/auth/register/` | Herkese açık | Hasta kaydı |
+| POST | `/api/auth/login/` | Herkese açık | JWT ile giriş |
+| GET/PATCH | `/api/profile/` | Hasta | Profil görüntüleme/güncelleme |
+| GET/POST | `/api/weight-history/` | Hasta | Kilo geçmişi |
+| GET/POST | `/api/appointments/` | Hasta | Randevu listesi ve oluşturma |
+| GET | `/api/appointments/available-slots/` | Hasta | Müsait seans saatleri |
+| POST | `/api/appointments/{id}/postpone/` | Doktor | Randevu erteleme + e-posta bildirimi |
+
+## Dil ve Yerelleştirme
+
+Platform Türkçe olarak hizmet vermektedir. Hedef kullanıcı kitlesi Türkiye'dedir.
 
 ## İletişim
 
