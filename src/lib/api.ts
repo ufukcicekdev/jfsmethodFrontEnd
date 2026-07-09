@@ -516,6 +516,30 @@ export interface Testimonial {
   created_at: string;
 }
 
+export interface BlogTopic {
+  id: number;
+  topic: string;
+  scheduled_date: string;
+  is_generated: boolean;
+  created_at: string;
+}
+
+export interface BlogPost {
+  id: number;
+  title: string;
+  slug: string;
+  content: string;
+  excerpt?: string;
+  cover_image: string | null;
+  is_published: boolean;
+  ai_generated: boolean;
+  topic: number | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+  view_count: number;
+}
+
 export type SiteSettingsUpdatePayload = Partial<SiteSettings>;
 
 export interface ContactSubmitPayload {
@@ -1549,6 +1573,30 @@ export const api = {
       delete: (token: string, id: number) => fetch(`${API_BASE}/admin/onboarding/questions/${id}/`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }).then(r => { if (!r.ok) throw new Error(); }),
       patientAnswers: (token: string, patientId: number) => apiFetch<OnboardingAnswer[]>(`/admin/patients/${patientId}/onboarding/`, { token }),
     },
+    blog: {
+      posts: {
+        list: (token: string) => apiFetch<BlogPost[]>("/admin/blog/posts/", { token }),
+        get: (token: string, id: number) => apiFetch<BlogPost>(`/admin/blog/posts/${id}/`, { token }),
+        create: (token: string, data: { title: string; content: string; is_published: boolean; topic?: number | null }) =>
+          apiFetch<BlogPost>("/admin/blog/posts/", { token, method: "POST", body: JSON.stringify(data) }),
+        update: (token: string, id: number, data: Partial<BlogPost>) =>
+          apiFetch<BlogPost>(`/admin/blog/posts/${id}/`, { token, method: "PATCH", body: JSON.stringify(data) }),
+        delete: (token: string, id: number) =>
+          fetch(`${API_BASE}/admin/blog/posts/${id}/`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
+            .then((r) => { if (!r.ok) throw new Error("Silinemedi."); }),
+      },
+      topics: {
+        list: (token: string) => apiFetch<BlogTopic[]>("/admin/blog/topics/", { token }),
+        create: (token: string, data: { topic: string; scheduled_date: string }) =>
+          apiFetch<BlogTopic>("/admin/blog/topics/", { token, method: "POST", body: JSON.stringify(data) }),
+        delete: (token: string, id: number) =>
+          fetch(`${API_BASE}/admin/blog/topics/${id}/`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
+            .then((r) => { if (!r.ok) throw new Error("Silinemedi."); }),
+      },
+      generate: (token: string, data: { topic_id?: number; topic?: string }) =>
+        apiFetch<BlogPost>("/admin/blog/generate/", { token, method: "POST", body: JSON.stringify(data) }),
+    },
+
     markAttendance: (token: string, patientId: number, attendanceStatus: "came" | "no_show", date?: string, packageId?: number) =>
       apiFetch<{ id: number; status: "came" | "no_show"; date: string }>(
         `/admin/patients/${patientId}/attendance/`,
@@ -1583,6 +1631,11 @@ export const api = {
         method: "POST",
         body: JSON.stringify(data),
       }),
+  },
+
+  blog: {
+    list: () => apiFetch<BlogPost[]>("/blog/"),
+    detail: (slug: string) => apiFetch<BlogPost>(`/blog/${slug}/`),
   },
 
   kvkk: {

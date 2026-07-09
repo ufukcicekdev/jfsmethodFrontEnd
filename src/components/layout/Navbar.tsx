@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { href: "#hizmetler", label: "Hizmetler" },
   { href: "#neden-biz", label: "Neden JFS?" },
   { href: "#paketler", label: "Paketler" },
+  { href: "/blog", label: "Blog" },
   { href: "#iletisim", label: "İletişim" },
 ];
 
