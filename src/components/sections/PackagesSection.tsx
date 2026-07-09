@@ -85,7 +85,7 @@ export function PackagesSection() {
             plans.length === 1
               ? "max-w-md"
               : plans.length === 2
-              ? "sm:grid-cols-2 max-w-2xl"
+              ? "sm:grid-cols-2 max-w-3xl"
               : "sm:grid-cols-2 lg:grid-cols-3"
           }`}>
             {plans.map((plan) => (
@@ -94,12 +94,13 @@ export function PackagesSection() {
                   <button
                     type="button"
                     onClick={() => setLightbox({ src: plan.image_url!, alt: plan.name })}
-                    className="group mb-4 overflow-hidden rounded-xl relative cursor-zoom-in"
+                    className="group mb-4 overflow-hidden rounded-xl relative cursor-zoom-in bg-slate-100 dark:bg-slate-800"
                   >
                     <img
                       src={plan.image_url}
                       alt={plan.name}
-                      className="h-44 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="w-full object-contain transition-transform duration-300 group-hover:scale-105"
+                      style={{ aspectRatio: "16/9" }}
                     />
                     {/* Hover overlay */}
                     <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors duration-300">

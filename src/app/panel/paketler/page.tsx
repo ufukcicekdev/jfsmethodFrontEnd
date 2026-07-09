@@ -203,7 +203,7 @@ export default function PackagePlansPage() {
               }`}
             >
               {plan.image_url && (
-                <img src={plan.image_url} alt={plan.name} className="mb-3 h-32 w-full rounded-xl object-cover" />
+                <img src={plan.image_url} alt={plan.name} className="mb-3 w-full rounded-xl object-contain bg-slate-100 dark:bg-slate-800" style={{ aspectRatio: "16/9" }} />
               )}
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -293,12 +293,15 @@ export default function PackagePlansPage() {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Paket Görseli
             </label>
+            <p className="mb-2 text-xs text-slate-400 dark:text-slate-500">
+              Önerilen boyut: <span className="font-semibold text-slate-500 dark:text-slate-400">1280 × 720 px</span> (16:9 yatay). JPG veya PNG.
+            </p>
             {imagePreview && (
               <div className="mb-3 relative w-full max-w-xs">
-                <img src={imagePreview} alt="Önizleme" className="h-40 w-full rounded-xl object-cover" />
+                <img src={imagePreview} alt="Önizleme" className="w-full rounded-xl object-contain bg-slate-100 dark:bg-slate-800" style={{ aspectRatio: "16/9" }} />
                 <button
                   type="button"
                   onClick={() => { setImageFile(null); setImagePreview(null); }}
