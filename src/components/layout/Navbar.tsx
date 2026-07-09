@@ -7,12 +7,12 @@ import { DarkModeToggle } from "@/components/ui/DarkModeToggle";
 import { isStaffUser } from "@/lib/auth";
 
 const NAV_LINKS = [
-  { href: "#hakkimizda", label: "Hakkımızda" },
-  { href: "#hizmetler", label: "Hizmetler" },
-  { href: "#neden-biz", label: "Neden JFS?" },
-  { href: "#paketler", label: "Paketler" },
+  { href: "/#hakkimizda", label: "Hakkımızda" },
+  { href: "/#hizmetler", label: "Hizmetler" },
+  { href: "/#neden-biz", label: "Neden JFS?" },
+  { href: "/#paketler", label: "Paketler" },
   { href: "/blog", label: "Blog" },
-  { href: "#iletisim", label: "İletişim" },
+  { href: "/#iletisim", label: "İletişim" },
 ];
 
 export function Navbar() {
