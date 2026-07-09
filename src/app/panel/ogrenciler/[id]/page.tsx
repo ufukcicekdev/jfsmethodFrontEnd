@@ -36,6 +36,9 @@ export default function StudentDetailPage() {
   const [success, setSuccess] = useState("");
   const [newWeight, setNewWeight] = useState("");
   const [activeTab, setActiveTab] = useState<"profil" | "egzersizler" | "paketler" | "postur" | "olcumler" | "diyet" | "onboarding">("profil");
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -277,6 +280,68 @@ export default function StudentDetailPage() {
             )}
             <button type="submit" disabled={saving} className="rounded-full bg-blue-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50">
               {saving ? "Kaydediliyor…" : "Profili Kaydet"}
+            </button>
+          </form>
+        </GlassCard>
+
+        {/* Şifre Değiştir */}
+        <GlassCard className="p-5 sm:p-6">
+          <h2 className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-50">Şifre Değiştir</h2>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (newPassword !== newPasswordConfirm) {
+                showMessage("Şifreler eşleşmiyor.", "error");
+                return;
+              }
+              if (newPassword.length < 6) {
+                showMessage("Şifre en az 6 karakter olmalıdır.", "error");
+                return;
+              }
+              const token = getAccessToken();
+              if (!token) return;
+              setChangingPassword(true);
+              try {
+                await api.admin.setPassword(token, id, newPassword);
+                showMessage("Şifre başarıyla güncellendi.", "success");
+                setNewPassword("");
+                setNewPasswordConfirm("");
+              } catch (err) {
+                showMessage(err instanceof Error ? err.message : "Şifre güncellenemedi.", "error");
+              } finally {
+                setChangingPassword(false);
+              }
+            }}
+            className="space-y-4"
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Yeni Şifre</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="En az 6 karakter"
+                  className="w-full rounded-xl border border-slate-200/60 bg-white/60 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-100"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Şifreyi Tekrarla</label>
+                <input
+                  type="password"
+                  value={newPasswordConfirm}
+                  onChange={(e) => setNewPasswordConfirm(e.target.value)}
+                  placeholder="Aynı şifreyi girin"
+                  className="w-full rounded-xl border border-slate-200/60 bg-white/60 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-100"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={changingPassword || !newPassword || !newPasswordConfirm}
+              className="rounded-full bg-orange-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50 transition-colors"
+            >
+              {changingPassword ? "Güncelleniyor…" : "Şifreyi Güncelle"}
             </button>
           </form>
         </GlassCard>

@@ -935,6 +935,13 @@ export const api = {
         token,
       }),
 
+    setPassword: (token: string, id: number, newPassword: string) =>
+      apiFetch<{ detail: string }>(`/admin/patients/${id}/set-password/`, {
+        method: "POST",
+        body: JSON.stringify({ new_password: newPassword }),
+        token,
+      }),
+
     addWeight: (token: string, id: number, weight: number) =>
       apiFetch<{ entry: WeightEntry; patient: AdminPatient }>(
         `/admin/patients/${id}/weight/`,
