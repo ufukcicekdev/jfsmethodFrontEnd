@@ -142,6 +142,31 @@ export default function StudentDetailPage() {
     }
   };
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== newPasswordConfirm) {
+      showMessage("Şifreler eşleşmiyor.", "error");
+      return;
+    }
+    if (newPassword.length < 6) {
+      showMessage("Şifre en az 6 karakter olmalıdır.", "error");
+      return;
+    }
+    const token = getAccessToken();
+    if (!token) return;
+    setChangingPassword(true);
+    try {
+      await api.admin.setPassword(token, id, newPassword);
+      showMessage("Şifre başarıyla güncellendi.", "success");
+      setNewPassword("");
+      setNewPasswordConfirm("");
+    } catch (err) {
+      showMessage(err instanceof Error ? err.message : "Şifre güncellenemedi.", "error");
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const handlePhotosChange = (photos: PatientProgressPhoto[]) => {
     setPatient((current) => (current ? { ...current, progress_photos: photos } : current));
   };
@@ -287,33 +312,7 @@ export default function StudentDetailPage() {
         {/* Şifre Değiştir */}
         <GlassCard className="p-5 sm:p-6">
           <h2 className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-50">Şifre Değiştir</h2>
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (newPassword !== newPasswordConfirm) {
-                showMessage("Şifreler eşleşmiyor.", "error");
-                return;
-              }
-              if (newPassword.length < 6) {
-                showMessage("Şifre en az 6 karakter olmalıdır.", "error");
-                return;
-              }
-              const token = getAccessToken();
-              if (!token) return;
-              setChangingPassword(true);
-              try {
-                await api.admin.setPassword(token, id, newPassword);
-                showMessage("Şifre başarıyla güncellendi.", "success");
-                setNewPassword("");
-                setNewPasswordConfirm("");
-              } catch (err) {
-                showMessage(err instanceof Error ? err.message : "Şifre güncellenemedi.", "error");
-              } finally {
-                setChangingPassword(false);
-              }
-            }}
-            className="space-y-4"
-          >
+          <form onSubmit={handleChangePassword} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Yeni Şifre</label>
