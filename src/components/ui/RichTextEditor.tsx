@@ -157,6 +157,8 @@ function LinkButton({ editor }: { editor: Editor }) {
 
 export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Editörün kendi tetiklediği onChange sonrası useEffect'in içeriği geri yüklemesini engeller
+  const skipSyncRef = useRef(false);
 
   const editor = useEditor({
     extensions: [
@@ -168,7 +170,10 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
       Placeholder.configure({ placeholder: placeholder ?? "Yazı içeriğini buraya girin…" }),
     ],
     content: value,
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    onUpdate: ({ editor }) => {
+      skipSyncRef.current = true;
+      onChange(editor.getHTML());
+    },
     editorProps: {
       attributes: {
         class: "min-h-[320px] w-full px-5 py-4 text-sm text-slate-800 dark:text-slate-100 outline-none leading-relaxed",
@@ -177,6 +182,11 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
   });
 
   useEffect(() => {
+    // Değişiklik editörden geldiyse resetleme — sadece dışarıdan (örn. form açılırken) sync et
+    if (skipSyncRef.current) {
+      skipSyncRef.current = false;
+      return;
+    }
     if (editor && value !== editor.getHTML()) {
       editor.commands.setContent(value || "");
     }
