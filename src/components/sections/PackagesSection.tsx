@@ -44,7 +44,13 @@ export function PackagesSection() {
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-200 border-t-blue-500" />
           </div>
         ) : (
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className={`mt-10 grid gap-5 mx-auto ${
+              plans.length === 1
+                ? "max-w-md"
+                : plans.length === 2
+                ? "sm:grid-cols-2 max-w-2xl"
+                : "sm:grid-cols-2 lg:grid-cols-3"
+            }`}>
             {plans.map((plan) => (
               <GlassCard
                 key={plan.id}
