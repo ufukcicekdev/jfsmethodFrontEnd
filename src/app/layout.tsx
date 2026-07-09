@@ -62,21 +62,14 @@ export const metadata: Metadata = {
     title: "JFS Method — Fizyoterapi Sonrası Hareket Danışmanlığı",
     description:
       "Ağrısız, kişiye özel ve sürdürülebilir vücut dönüşümü için bilimsel temelli hareket danışmanlığı.",
-    images: [
-      {
-        url: "/screenshot-wide.png",
-        width: 1280,
-        height: 720,
-        alt: "JFS Method — Hareket Danışmanlığı Platformu",
-      },
-    ],
+    images: [],
   },
   twitter: {
     card: "summary_large_image",
     title: "JFS Method — Fizyoterapi Sonrası Hareket Danışmanlığı",
     description:
       "Ağrısız, kişiye özel ve sürdürülebilir vücut dönüşümü için bilimsel temelli hareket danışmanlığı.",
-    images: ["/screenshot-wide.png"],
+    images: [],
   },
   robots: {
     index: true,
