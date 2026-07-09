@@ -262,6 +262,7 @@ export default function StudentDetailPage() {
       </div>
 
       {activeTab === "profil" && (
+        <>
         <GlassCard className="p-5 sm:p-6">
           <h2 className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-50">Profil Bilgileri</h2>
           <form onSubmit={handleSaveProfile} className="space-y-4">
@@ -344,6 +345,7 @@ export default function StudentDetailPage() {
             </button>
           </form>
         </GlassCard>
+        </>
       )}
 
       {activeTab === "egzersizler" && (
