@@ -406,8 +406,18 @@ export interface DietProgram {
   duration_days: number;
   is_active: boolean;
   created_at: string;
-  assigned_by_name: string | null;
+  created_by_name: string | null;
+  assignment_count: number;
   days: DietDay[];
+}
+
+export interface PatientDietAssignment {
+  id: number;
+  program: DietProgram;
+  is_active: boolean;
+  note: string;
+  assigned_at: string;
+  assigned_by_name: string | null;
 }
 
 export interface Faq {
@@ -1599,14 +1609,27 @@ export const api = {
         }).then((r) => { if (!r.ok) throw new Error("Silinemedi."); }),
     },
     dietPrograms: {
+      list: (token: string) =>
+        apiFetch<DietProgram[]>(`/admin/diet-programs/`, { token }),
+      create: (token: string, data: object) =>
+        apiFetch<DietProgram>(`/admin/diet-programs/`, { token, method: "POST", body: JSON.stringify(data) }),
+      update: (token: string, programId: number, data: object) =>
+        apiFetch<DietProgram>(`/admin/diet-programs/${programId}/`, { token, method: "PATCH", body: JSON.stringify(data) }),
+      delete: (token: string, programId: number) =>
+        fetch(`${API_BASE}/admin/diet-programs/${programId}/`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }).then((r) => { if (!r.ok) throw new Error("Silinemedi."); }),
+    },
+    dietAssignments: {
       list: (token: string, patientId: number) =>
-        apiFetch<DietProgram[]>(`/admin/patients/${patientId}/diet-programs/`, { token }),
-      create: (token: string, patientId: number, data: object) =>
-        apiFetch<DietProgram>(`/admin/patients/${patientId}/diet-programs/`, { token, method: "POST", body: JSON.stringify(data) }),
-      update: (token: string, patientId: number, programId: number, data: object) =>
-        apiFetch<DietProgram>(`/admin/patients/${patientId}/diet-programs/${programId}/`, { token, method: "PATCH", body: JSON.stringify(data) }),
-      delete: (token: string, patientId: number, programId: number) =>
-        fetch(`${API_BASE}/admin/patients/${patientId}/diet-programs/${programId}/`, {
+        apiFetch<PatientDietAssignment[]>(`/admin/patients/${patientId}/diet-assignments/`, { token }),
+      create: (token: string, patientId: number, data: { program_id: number; note?: string }) =>
+        apiFetch<PatientDietAssignment>(`/admin/patients/${patientId}/diet-assignments/`, { token, method: "POST", body: JSON.stringify(data) }),
+      update: (token: string, patientId: number, assignmentId: number, data: { is_active?: boolean; note?: string }) =>
+        apiFetch<PatientDietAssignment>(`/admin/patients/${patientId}/diet-assignments/${assignmentId}/`, { token, method: "PATCH", body: JSON.stringify(data) }),
+      delete: (token: string, patientId: number, assignmentId: number) =>
+        fetch(`${API_BASE}/admin/patients/${patientId}/diet-assignments/${assignmentId}/`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
         }).then((r) => { if (!r.ok) throw new Error("Silinemedi."); }),
