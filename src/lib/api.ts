@@ -370,6 +370,46 @@ export interface DietPlan {
   created_at: string;
 }
 
+export interface DietMealItem {
+  id?: number;
+  diet_item_id?: number | null;
+  name: string;
+  quantity: number;
+  calories: number;
+  note: string;
+}
+
+export interface DietMeal {
+  id?: number;
+  meal_type: string;
+  meal_type_label?: string;
+  meal_time: string;
+  description: string;
+  order?: number;
+  items: DietMealItem[];
+  total_calories?: number;
+}
+
+export interface DietDay {
+  id?: number;
+  day_number: number;
+  label: string;
+  description: string;
+  meals: DietMeal[];
+}
+
+export interface DietProgram {
+  id: number;
+  title: string;
+  goals: string;
+  feeding_notes: string;
+  duration_days: number;
+  is_active: boolean;
+  created_at: string;
+  assigned_by_name: string | null;
+  days: DietDay[];
+}
+
 export interface Faq {
   id: number;
   question: string;
@@ -1554,6 +1594,19 @@ export const api = {
         apiFetch<DietPlan>(`/admin/patients/${patientId}/diets/${planId}/`, { token, method: "PUT", body: JSON.stringify(data) }),
       delete: (token: string, patientId: number, planId: number) =>
         fetch(`${API_BASE}/admin/patients/${patientId}/diets/${planId}/`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }).then((r) => { if (!r.ok) throw new Error("Silinemedi."); }),
+    },
+    dietPrograms: {
+      list: (token: string, patientId: number) =>
+        apiFetch<DietProgram[]>(`/admin/patients/${patientId}/diet-programs/`, { token }),
+      create: (token: string, patientId: number, data: object) =>
+        apiFetch<DietProgram>(`/admin/patients/${patientId}/diet-programs/`, { token, method: "POST", body: JSON.stringify(data) }),
+      update: (token: string, patientId: number, programId: number, data: object) =>
+        apiFetch<DietProgram>(`/admin/patients/${patientId}/diet-programs/${programId}/`, { token, method: "PATCH", body: JSON.stringify(data) }),
+      delete: (token: string, patientId: number, programId: number) =>
+        fetch(`${API_BASE}/admin/patients/${patientId}/diet-programs/${programId}/`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
         }).then((r) => { if (!r.ok) throw new Error("Silinemedi."); }),
