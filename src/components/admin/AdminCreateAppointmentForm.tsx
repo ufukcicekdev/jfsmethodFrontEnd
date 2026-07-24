@@ -1,15 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { FormField, FormGroup } from "@/components/ui/FormField";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { getAccessToken } from "@/lib/auth";
-import {
-  api,
-  type AdminPatient,
-  type AvailableSlot,
-  type Doctor,
-} from "@/lib/api";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { api, type AdminPatient, type AvailableSlot } from "@/lib/api";
 
 interface AdminCreateAppointmentFormProps {
   onCreated: () => void;
@@ -29,14 +25,13 @@ export function AdminCreateAppointmentForm({
   onClose,
   onMessage,
 }: AdminCreateAppointmentFormProps) {
+  const { user } = useAuth();
   const [patients, setPatients] = useState<AdminPatient[]>([]);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const [patientId, setPatientId] = useState(0);
-  const [doctorId, setDoctorId] = useState(0);
   const [date, setDate] = useState("");
   const [datetime, setDatetime] = useState("");
   const [note, setNote] = useState("");
@@ -44,13 +39,10 @@ export function AdminCreateAppointmentForm({
   useEffect(() => {
     const token = getAccessToken();
     if (!token) return;
-    Promise.all([api.admin.patients(token), api.appointments.doctors(token)])
-      .then(([patientList, doctorList]) => {
-        setPatients(patientList);
-        setDoctors(doctorList);
-        if (doctorList.length) setDoctorId(doctorList[0].id);
-      })
-      .catch(() => onMessage("Liste verileri yüklenemedi.", "error"));
+    api.admin
+      .patients(token)
+      .then((list) => setPatients(Array.isArray(list) ? list : []))
+      .catch(() => onMessage("Öğrenci listesi yüklenemedi.", "error"));
   }, [onMessage]);
 
   useEffect(() => {
@@ -63,27 +55,27 @@ export function AdminCreateAppointmentForm({
     setDatetime("");
     api.appointments
       .availableSlots(token, date)
-      .then(setSlots)
+      .then((data) => setSlots(Array.isArray(data) ? data : []))
       .catch(() => setSlots([]))
       .finally(() => setSlotsLoading(false));
   }, [date]);
 
-  const doctorSlots = useMemo(
-    () => slots.filter((s) => s.doctor_id === doctorId),
-    [slots, doctorId]
-  );
+  // Admin kendi ID'si ile doktor → sadece kendi slotlarını göster
+  const mySlots = user?.id
+    ? slots.filter((s) => s.doctor_id === user.id)
+    : slots;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = getAccessToken();
-    if (!token) return;
+    if (!token || !user?.id) return;
 
     if (!patientId) {
       onMessage("Lütfen bir öğrenci seçin.", "error");
       return;
     }
-    if (!doctorId || !datetime) {
-      onMessage("Lütfen doktor ve saat seçin.", "error");
+    if (!datetime) {
+      onMessage("Lütfen bir saat seçin.", "error");
       return;
     }
 
@@ -91,7 +83,7 @@ export function AdminCreateAppointmentForm({
     try {
       await api.admin.createAppointment(token, {
         patient_id: patientId,
-        doctor: doctorId,
+        doctor: user.id,
         appointment_datetime: datetime,
         note: note.trim(),
       });
@@ -128,33 +120,20 @@ export function AdminCreateAppointmentForm({
         </button>
       </div>
 
-      <FormGroup label="Öğrenci" required>
-        <CustomSelect
-          value={patientId}
-          onChange={setPatientId}
-          className="w-full"
-          options={[
-            { value: 0, label: "Öğrenci seçin…" },
-            ...patients.map((p) => ({
-              value: p.id,
-              label: `${p.full_name}${p.phone ? ` · ${p.phone}` : ""}`,
-            })),
-          ]}
-          aria-label="Öğrenci"
-        />
-      </FormGroup>
-
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormGroup label="Doktor" required>
+        <FormGroup label="Öğrenci" required>
           <CustomSelect
-            value={doctorId}
-            onChange={setDoctorId}
+            value={patientId}
+            onChange={setPatientId}
             className="w-full"
-            options={doctors.map((d) => ({
-              value: d.id,
-              label: d.full_name,
-            }))}
-            aria-label="Doktor"
+            options={[
+              { value: 0, label: "Öğrenci seçin…" },
+              ...patients.map((p) => ({
+                value: p.id,
+                label: `${p.full_name}${p.phone ? ` · ${p.phone}` : ""}`,
+              })),
+            ]}
+            aria-label="Öğrenci"
           />
         </FormGroup>
 
@@ -178,13 +157,13 @@ export function AdminCreateAppointmentForm({
           <p className="text-sm text-slate-500 dark:text-slate-400">
             Müsait saatler yükleniyor…
           </p>
-        ) : doctorSlots.length === 0 ? (
+        ) : mySlots.length === 0 ? (
           <p className="text-sm text-amber-600 dark:text-amber-400">
-            Bu tarih ve doktor için müsait saat yok.
+            Bu tarih için müsait saat yok.
           </p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {doctorSlots.map((slot) => (
+            {mySlots.map((slot) => (
               <button
                 key={slot.datetime}
                 type="button"
