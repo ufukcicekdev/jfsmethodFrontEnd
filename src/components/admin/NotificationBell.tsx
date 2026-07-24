@@ -159,7 +159,10 @@ export function NotificationBell() {
       if (!notification.is_read) {
         await api.admin.markNotificationRead(token, notification.id);
       }
-      await fetchNotifications();
+      // Bildirimi listeden kaldır ve dropdown'ı kapat
+      setNotifications((items) => items.filter((n) => n.id !== notification.id));
+      setUnreadCount((c) => Math.max(0, c - (notification.is_read ? 0 : 1)));
+      setOpen(false);
     } catch {
       /* ignore */
     } finally {

@@ -29,6 +29,27 @@ function unwrapPaginatedList<T>(data: T[] | PaginatedResponse<T>): T[] {
   return [];
 }
 
+async function tryRefreshToken(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  const { getRefreshToken, setTokens, clearTokens } = await import("@/lib/auth");
+  const refresh = getRefreshToken();
+  if (!refresh) return null;
+  try {
+    const res = await fetch(`${API_BASE}/auth/refresh/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh }),
+    });
+    if (!res.ok) { clearTokens(); return null; }
+    const data = (await res.json()) as { access: string };
+    setTokens(data.access, refresh);
+    return data.access;
+  } catch {
+    clearTokens();
+    return null;
+  }
+}
+
 async function apiFetch<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
   const { token, headers: customHeaders, ...rest } = options;
 
@@ -41,7 +62,16 @@ async function apiFetch<T>(endpoint: string, options: ApiOptions = {}): Promise<
     (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, { headers, ...rest });
+  let response = await fetch(`${API_BASE}${endpoint}`, { headers, ...rest });
+
+  // Token süresi dolmuşsa refresh dene ve bir kez daha iste
+  if (response.status === 401 && token) {
+    const newToken = await tryRefreshToken();
+    if (newToken) {
+      (headers as Record<string, string>)["Authorization"] = `Bearer ${newToken}`;
+      response = await fetch(`${API_BASE}${endpoint}`, { headers, ...rest });
+    }
+  }
 
   if (!response.ok) {
     const error = (await response.json().catch(() => ({}))) as ApiErrorBody;
@@ -501,6 +531,9 @@ export interface SlotBlock {
 export interface ClinicSchedule {
   slot_duration_minutes: number;
   slot_capacity: number;
+  slot_break_minutes: number;
+  free_cancel_hours: number;
+  late_cancel_penalty_minutes: number;
   working_days: WorkingDaySchedule[];
   holidays: ClinicHoliday[];
 }
@@ -508,6 +541,9 @@ export interface ClinicSchedule {
 export interface ClinicScheduleUpdatePayload {
   slot_duration_minutes: number;
   slot_capacity?: number;
+  slot_break_minutes?: number;
+  free_cancel_hours?: number;
+  late_cancel_penalty_minutes?: number;
   working_days: {
     day_of_week: number;
     is_working: boolean;
@@ -896,6 +932,11 @@ export const api = {
   packages: {
     me: (token: string) =>
       apiFetch<SessionPackage[]>("/packages/me/", { token }),
+    penalties: (token: string) =>
+      apiFetch<{ date: string; note: string; created_at: string }[]>(
+        "/packages/penalties/",
+        { token }
+      ),
   },
 
   devices: {

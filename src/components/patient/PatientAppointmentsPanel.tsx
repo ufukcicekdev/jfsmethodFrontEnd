@@ -112,11 +112,14 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
     loadMyAppointments();
   }, [token]);
 
-  const handleCancel = async (id: number) => {
+  const handleCancel = async (id: number, appointment: Appointment) => {
     if (!token) return;
+    const warning = getCancelWarning(appointment);
     const ok = await confirm({
       title: "Randevuyu iptal et",
-      message: "Randevunuzu iptal etmek istediğinize emin misiniz?",
+      message: warning
+        ? `⚠️ ${warning}\n\nYine de iptal etmek istiyor musunuz?`
+        : "Randevunuzu iptal etmek istediğinize emin misiniz?",
       confirmLabel: "İptal et",
       variant: "danger",
     });
@@ -155,6 +158,22 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getCancelLabel = (appointment: Appointment) => {
+    const msLeft = new Date(appointment.appointment_datetime).getTime() - Date.now();
+    const minutesLeft = msLeft / 60000;
+    if (minutesLeft <= 30) return "İptal Et (seans hakkı yanar!)";
+    if (minutesLeft <= 360) return "İptal Et (6 saatten az kaldı)";
+    return "İptal";
+  };
+
+  const getCancelWarning = (appointment: Appointment) => {
+    const msLeft = new Date(appointment.appointment_datetime).getTime() - Date.now();
+    const minutesLeft = msLeft / 60000;
+    if (minutesLeft <= 30)
+      return "Son 30 dakika içinde iptal ettiğiniz için bu seans hakkınız düşecektir.";
+    return null;
   };
 
   const upcoming = myAppointments.filter(
@@ -382,10 +401,12 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
                       <button
                         type="button"
                         disabled={cancellingId === appointment.id}
-                        onClick={() => handleCancel(appointment.id)}
+                        onClick={() => handleCancel(appointment.id, appointment)}
                         className="text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-50 dark:text-red-400"
                       >
-                        {cancellingId === appointment.id ? "İptaliniz…" : "İptal"}
+                        {cancellingId === appointment.id
+                          ? "İptaliniz…"
+                          : getCancelLabel(appointment)}
                       </button>
                     )}
                 </div>

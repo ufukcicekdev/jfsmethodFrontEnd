@@ -56,6 +56,9 @@ export default function SchedulePage() {
   const [workingDays, setWorkingDays] = useState<WorkingDaySchedule[]>([]);
   const [slotDuration, setSlotDuration] = useState(30);
   const [slotCapacity, setSlotCapacity] = useState(1);
+  const [slotBreak, setSlotBreak] = useState(0);
+  const [freeCancelHours, setFreeCancelHours] = useState(6);
+  const [lateCancelMinutes, setLateCancelMinutes] = useState(30);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -106,6 +109,9 @@ export default function SchedulePage() {
         setWorkingDays(sched.working_days);
         setSlotDuration(sched.slot_duration_minutes);
         setSlotCapacity(sched.slot_capacity ?? 1);
+        setSlotBreak(sched.slot_break_minutes ?? 0);
+        setFreeCancelHours(sched.free_cancel_hours ?? 6);
+        setLateCancelMinutes(sched.late_cancel_penalty_minutes ?? 30);
         setHolidays(sched.holidays);
         setBlocks(slotBlocks);
       })
@@ -138,6 +144,9 @@ export default function SchedulePage() {
       const updated = await api.admin.updateSchedule(token, {
         slot_duration_minutes: slotDuration,
         slot_capacity: slotCapacity,
+        slot_break_minutes: slotBreak,
+        free_cancel_hours: freeCancelHours,
+        late_cancel_penalty_minutes: lateCancelMinutes,
         working_days: workingDays.map((day) => ({
           day_of_week: day.day_of_week,
           is_working: day.is_working,
@@ -147,6 +156,8 @@ export default function SchedulePage() {
       });
       setSchedule(updated);
       setWorkingDays(updated.working_days);
+      setFreeCancelHours(updated.free_cancel_hours ?? 6);
+      setLateCancelMinutes(updated.late_cancel_penalty_minutes ?? 30);
       setSuccess("Çalışma programı kaydedildi.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kayıt başarısız.");
@@ -412,6 +423,63 @@ export default function SchedulePage() {
                 <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
                   Örn. 3 girerseniz aynı saate 3 farklı öğrenci randevu
                   alabilir.
+                </p>
+              </div>
+            </div>
+
+            {/* Slot arası boşluk + İptal politikası */}
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <FormGroup label="Slotlar Arası Dinlenme (dk)">
+                  <FormInput
+                    type="number"
+                    min={0}
+                    max={120}
+                    value={slotBreak}
+                    onChange={(e) =>
+                      setSlotBreak(Math.max(0, Number(e.target.value) || 0))
+                    }
+                    className="w-full"
+                  />
+                </FormGroup>
+                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  Her randevu slotundan sonra kaç dakika boşluk bırakılsın. 0 = boşluk yok.
+                </p>
+              </div>
+
+              <div>
+                <FormGroup label="Cezasız İptal Süresi (saat)">
+                  <FormInput
+                    type="number"
+                    min={0}
+                    max={72}
+                    value={freeCancelHours}
+                    onChange={(e) =>
+                      setFreeCancelHours(Math.max(0, Number(e.target.value) || 0))
+                    }
+                    className="w-full"
+                  />
+                </FormGroup>
+                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  Randevudan bu kadar saatten önce yapılan iptal cezasız.
+                </p>
+              </div>
+
+              <div>
+                <FormGroup label="Geç İptal Ceza Eşiği (dk)">
+                  <FormInput
+                    type="number"
+                    min={0}
+                    max={1440}
+                    value={lateCancelMinutes}
+                    onChange={(e) =>
+                      setLateCancelMinutes(Math.max(0, Number(e.target.value) || 0))
+                    }
+                    className="w-full"
+                  />
+                </FormGroup>
+                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  Bu dakikadan az süre kalmışken iptal edilirse seans hakkı yanar.
                 </p>
               </div>
             </div>

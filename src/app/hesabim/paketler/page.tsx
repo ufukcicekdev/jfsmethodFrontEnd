@@ -26,17 +26,25 @@ function formatDate(value: string | null) {
   });
 }
 
+type Penalty = { date: string; note: string; created_at: string };
+
 export default function PatientPackagesPage() {
   const [packages, setPackages] = useState<SessionPackage[]>([]);
+  const [penalties, setPenalties] = useState<Penalty[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = getAccessToken();
     if (!token) return;
-    api.packages
-      .me(token)
-      .then(setPackages)
-      .catch(() => setPackages([]))
+    Promise.all([
+      api.packages.me(token),
+      api.packages.penalties(token),
+    ])
+      .then(([pkgs, pen]) => {
+        setPackages(pkgs);
+        setPenalties(pen);
+      })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -196,6 +204,38 @@ export default function PatientPackagesPage() {
               </tbody>
             </table>
           </div>
+        </GlassCard>
+      )}
+      {penalties.length > 0 && (
+        <GlassCard className="p-4 sm:p-6">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">
+            Geç İptal / Ceza Geçmişi
+          </h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Son dakika iptalleriniz nedeniyle düşülen seans hakları.
+          </p>
+          <ul className="mt-4 space-y-2">
+            {penalties.map((p, i) => (
+              <li
+                key={i}
+                className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-red-200/60 bg-red-50/50 px-4 py-3 dark:border-red-800/40 dark:bg-red-950/20"
+              >
+                <div>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                    {formatDate(p.date)}
+                  </p>
+                  {p.note && (
+                    <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                      {p.note}
+                    </p>
+                  )}
+                </div>
+                <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700 dark:bg-red-950/50 dark:text-red-300">
+                  −1 seans
+                </span>
+              </li>
+            ))}
+          </ul>
         </GlassCard>
       )}
     </div>
