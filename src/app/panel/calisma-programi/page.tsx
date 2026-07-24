@@ -73,6 +73,7 @@ export default function SchedulePage() {
     end_time: "",
     reason: "",
   });
+  const [pendingBlocks, setPendingBlocks] = useState<typeof blockForm[]>([]);
   const [blockLoading, setBlockLoading] = useState(false);
 
   // --- holidays state ---
@@ -180,28 +181,42 @@ export default function SchedulePage() {
 
   // ── Tab: Slot Kapatma ─────────────────────────────────────────────────────
 
-  const handleAddBlock = async (e: React.FormEvent) => {
+  const handleAddToPending = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!blockForm.date || !blockForm.start_time || !blockForm.end_time) return;
+    setPendingBlocks((prev) => [...prev, { ...blockForm }]);
+    setBlockForm((f) => ({ date: f.date, start_time: "", end_time: "", reason: "" }));
+  };
+
+  const handleRemovePending = (index: number) => {
+    setPendingBlocks((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSaveBlocks = async () => {
     const token = getAccessToken();
-    if (!token) return;
+    if (!token || pendingBlocks.length === 0) return;
 
     clearFeedback();
     setBlockLoading(true);
     try {
-      const block = await api.admin.addSlotBlock(token, {
-        ...blockForm,
-        start_time: toApiTime(blockForm.start_time),
-        end_time: toApiTime(blockForm.end_time),
-      });
-      setBlocks((b) =>
-        [...b, block].sort((a, b) =>
+      const saved = await Promise.all(
+        pendingBlocks.map((b) =>
+          api.admin.addSlotBlock(token, {
+            ...b,
+            start_time: toApiTime(b.start_time),
+            end_time: toApiTime(b.end_time),
+          })
+        )
+      );
+      setBlocks((prev) =>
+        [...prev, ...saved].sort((a, b) =>
           a.date === b.date
             ? a.start_time.localeCompare(b.start_time)
             : a.date.localeCompare(b.date)
         )
       );
-      setBlockForm({ date: "", start_time: "", end_time: "", reason: "" });
-      setSuccess("Slot kapatıldı.");
+      setPendingBlocks([]);
+      setSuccess(`${saved.length} slot kapatıldı.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Slot kapatılamadı.");
     } finally {
@@ -690,7 +705,7 @@ export default function SchedulePage() {
             Örneğin öğle arası, toplantı veya kısa izinler için kullanın.
           </p>
 
-          <form onSubmit={handleAddBlock} className="mt-5 space-y-4">
+          <form onSubmit={handleAddToPending} className="mt-5 space-y-4">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <FormField
                 label="Tarih"
@@ -735,17 +750,50 @@ export default function SchedulePage() {
             </div>
             <button
               type="submit"
-              disabled={
-                blockLoading ||
-                !blockForm.date ||
-                !blockForm.start_time ||
-                !blockForm.end_time
-              }
-              className="w-full rounded-full bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-50 sm:w-auto"
+              disabled={!blockForm.date || !blockForm.start_time || !blockForm.end_time}
+              className="w-full rounded-full border border-amber-400 bg-amber-50 px-5 py-2.5 text-sm font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-700/50 dark:bg-amber-950/20 dark:text-amber-300 sm:w-auto"
             >
-              {blockLoading ? "Kapatılıyor…" : "Slot Kapat"}
+              + Listeye Ekle
             </button>
           </form>
+
+          {/* Bekleyen eklemeler */}
+          {pendingBlocks.length > 0 && (
+            <div className="mt-4 space-y-2 rounded-xl border border-amber-200/80 bg-amber-50/40 p-4 dark:border-amber-800/40 dark:bg-amber-950/10">
+              <p className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                Kaydedilecekler ({pendingBlocks.length})
+              </p>
+              <ul className="space-y-2">
+                {pendingBlocks.map((b, i) => (
+                  <li key={i} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-slate-700 dark:text-slate-200">
+                      <span className="font-medium">{b.date}</span>
+                      {" · "}
+                      {b.start_time} – {b.end_time}
+                      {b.reason && (
+                        <span className="ml-2 text-slate-500 dark:text-slate-400">· {b.reason}</span>
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePending(i)}
+                      className="text-red-500 hover:text-red-700 dark:text-red-400"
+                    >
+                      Kaldır
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                onClick={handleSaveBlocks}
+                disabled={blockLoading}
+                className="mt-2 w-full rounded-full bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-50 sm:w-auto"
+              >
+                {blockLoading ? "Kaydediliyor…" : `Hepsini Kaydet (${pendingBlocks.length})`}
+              </button>
+            </div>
+          )}
 
           {blocks.length === 0 ? (
             <p className="mt-6 text-sm text-slate-500 dark:text-slate-400">
