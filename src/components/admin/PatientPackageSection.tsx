@@ -110,6 +110,7 @@ export function PatientPackageSection({
   const [form, setForm] = useState({
     plan_id: 0,
     is_paid: false,
+    used_sessions: 0,
   });
 
   useEffect(() => {
@@ -158,8 +159,9 @@ export function PatientPackageSection({
         plan_id: form.plan_id,
         purchased_at: todayIso,
         is_paid: form.is_paid,
+        used_sessions: form.used_sessions > 0 ? form.used_sessions : undefined,
       });
-      setForm({ plan_id: 0, is_paid: false });
+      setForm({ plan_id: 0, is_paid: false, used_sessions: 0 });
       onMessage("Paket atandı.", "success");
       onChanged();
     } catch (err) {
@@ -435,6 +437,21 @@ export function PatientPackageSection({
                   })),
                 ]}
                 aria-label="Paket planı"
+              />
+            </FormGroup>
+
+            <FormGroup
+              label="Geçmişte Kullanılan Seans (eski öğrenci aktarımı)"
+              hint="Öğrenci daha önce bu paketten seans kullandıysa buraya girin. 0 bırakabilirsiniz."
+            >
+              <input
+                type="number"
+                min={0}
+                value={form.used_sessions}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, used_sessions: Math.max(0, Number(e.target.value)) }))
+                }
+                className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 dark:border-slate-600 dark:bg-slate-800/80 dark:text-slate-100"
               />
             </FormGroup>
 

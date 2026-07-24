@@ -13,6 +13,16 @@ export interface LegalDocument {
   footer?: string;
 }
 
+export interface CancelPolicy {
+  free_cancel_hours: number;
+  late_cancel_penalty_minutes: number;
+}
+
+const DEFAULT_CANCEL_POLICY: CancelPolicy = {
+  free_cancel_hours: 6,
+  late_cancel_penalty_minutes: 30,
+};
+
 export const AYDINLATMA_DOCUMENT: LegalDocument = {
   subtitle: `KVKK Aydınlatma Metni (${KVKK_VERSION})`,
   meta: [
@@ -89,3 +99,58 @@ export const ACIK_RIZA_DOCUMENT: LegalDocument = {
     },
   ],
 };
+
+export function buildRandevuSozlesmesi(policy: CancelPolicy = DEFAULT_CANCEL_POLICY): LegalDocument {
+  const freeCancelLabel =
+    policy.free_cancel_hours < 24
+      ? `${policy.free_cancel_hours} saat`
+      : `${Math.round(policy.free_cancel_hours / 24)} gün`;
+
+  const penaltyLabel =
+    policy.late_cancel_penalty_minutes >= 60
+      ? `${Math.round(policy.late_cancel_penalty_minutes / 60)} saat`
+      : `${policy.late_cancel_penalty_minutes} dakika`;
+
+  return {
+    subtitle: `Randevu & İptal Politikası (${KVKK_VERSION})`,
+    meta: [
+      { label: "Klinik", value: "JFS Method Hareket Danışmanlığı" },
+      { label: "İletişim", value: "info@jfsmethod.com" },
+    ],
+    sections: [
+      {
+        title: "1. Randevu Oluşturma",
+        paragraphs: [
+          "Randevular yalnızca aktif seans paketi olan öğrenciler tarafından sistem üzerinden alınabilir. Paket bitiminde yeni bir paket satın alınması gerekmektedir.",
+        ],
+      },
+      {
+        title: "2. İptal Politikası",
+        paragraphs: [
+          `Randevunuzu randevu saatinden en az ${freeCancelLabel} önce iptal ederseniz seans hakkınız iade edilir ve herhangi bir ceza uygulanmaz.`,
+          `Randevu saatine ${penaltyLabel} veya daha az kaldığında yapılan iptallerde 1 seans hakkı düşülür. Bu durum, erken iptal ile açılan slotun başka öğrenciye tahsis edilememesinden kaynaklanmaktadır.`,
+        ],
+      },
+      {
+        title: "3. Devamsızlık",
+        paragraphs: [
+          "Randevunuza gelmediyseniz ve önceden iptal etmediyseniz, seansınız \"gelmedi\" olarak işaretlenir ve 1 seans hakkı düşülür.",
+          "Devamsızlık geçmişinizi «Hesabım → Paketlerim» bölümünden takip edebilirsiniz.",
+        ],
+      },
+      {
+        title: "4. Erteleme",
+        paragraphs: [
+          "Randevunuzu iptal etmek yerine erteleyebilirsiniz. Erteleme, aynı iptal süresi kurallarına tabidir.",
+        ],
+      },
+      {
+        title: "5. Klinik Tarafından İptal",
+        paragraphs: [
+          "Klinik tarafından gerçekleştirilen iptal veya gün iptali durumunda seans hakkınız iade edilir ve size bildirim gönderilir.",
+        ],
+      },
+    ],
+    footer: `Bu politika yürürlükteki klinik ayarlarına göre otomatik oluşturulmuştur. Geçerli sürüm: ${KVKK_VERSION}`,
+  };
+}

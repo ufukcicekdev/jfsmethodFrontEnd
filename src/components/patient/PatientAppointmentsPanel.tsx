@@ -308,6 +308,18 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
                 onOpenAcikRiza={() => openLegalModal("acik_riza")}
               />
 
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Randevu alarak{" "}
+                <button
+                  type="button"
+                  onClick={() => openLegalModal("randevu_sozlesmesi")}
+                  className="font-medium text-blue-600 underline-offset-2 hover:underline dark:text-blue-400"
+                >
+                  Randevu &amp; İptal Politikası
+                </button>
+                'nı kabul etmiş sayılırsınız.
+              </p>
+
               {error && <p className="text-sm text-red-600">{error}</p>}
 
               <button

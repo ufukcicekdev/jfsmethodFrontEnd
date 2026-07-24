@@ -59,6 +59,9 @@ export default function SchedulePage() {
   const [slotBreak, setSlotBreak] = useState(0);
   const [freeCancelHours, setFreeCancelHours] = useState(6);
   const [lateCancelMinutes, setLateCancelMinutes] = useState(30);
+  const [reminder24h, setReminder24h] = useState(true);
+  const [reminder1h, setReminder1h] = useState(true);
+  const [reminderCustomMinutes, setReminderCustomMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -112,6 +115,9 @@ export default function SchedulePage() {
         setSlotBreak(sched.slot_break_minutes ?? 0);
         setFreeCancelHours(sched.free_cancel_hours ?? 6);
         setLateCancelMinutes(sched.late_cancel_penalty_minutes ?? 30);
+        setReminder24h(sched.reminder_24h_enabled ?? true);
+        setReminder1h(sched.reminder_1h_enabled ?? true);
+        setReminderCustomMinutes(sched.reminder_custom_minutes ?? 0);
         setHolidays(sched.holidays);
         setBlocks(slotBlocks);
       })
@@ -147,6 +153,9 @@ export default function SchedulePage() {
         slot_break_minutes: slotBreak,
         free_cancel_hours: freeCancelHours,
         late_cancel_penalty_minutes: lateCancelMinutes,
+        reminder_24h_enabled: reminder24h,
+        reminder_1h_enabled: reminder1h,
+        reminder_custom_minutes: reminderCustomMinutes,
         working_days: workingDays.map((day) => ({
           day_of_week: day.day_of_week,
           is_working: day.is_working,
@@ -158,6 +167,9 @@ export default function SchedulePage() {
       setWorkingDays(updated.working_days);
       setFreeCancelHours(updated.free_cancel_hours ?? 6);
       setLateCancelMinutes(updated.late_cancel_penalty_minutes ?? 30);
+      setReminder24h(updated.reminder_24h_enabled ?? true);
+      setReminder1h(updated.reminder_1h_enabled ?? true);
+      setReminderCustomMinutes(updated.reminder_custom_minutes ?? 0);
       setSuccess("Çalışma programı kaydedildi.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kayıt başarısız.");
@@ -481,6 +493,51 @@ export default function SchedulePage() {
                 <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
                   Bu dakikadan az süre kalmışken iptal edilirse seans hakkı yanar.
                 </p>
+              </div>
+
+              {/* Hatırlatma bildirimleri */}
+              <div className="col-span-full border-t border-slate-200/80 pt-4 dark:border-slate-600/50">
+                <p className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  Öğrenci Hatırlatma Bildirimleri
+                </p>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={reminder24h}
+                      onChange={(e) => setReminder24h(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-500 focus:ring-blue-400"
+                    />
+                    24 saat öncesi hatırlatma gönder
+                  </label>
+                  <label className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={reminder1h}
+                      onChange={(e) => setReminder1h(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-500 focus:ring-blue-400"
+                    />
+                    1 saat öncesi hatırlatma gönder
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <FormGroup label="Ekstra hatırlatma (dakika önce)">
+                      <FormInput
+                        type="number"
+                        min={0}
+                        max={10080}
+                        placeholder="0 = kapalı"
+                        value={reminderCustomMinutes || ""}
+                        onChange={(e) =>
+                          setReminderCustomMinutes(Math.max(0, Number(e.target.value) || 0))
+                        }
+                        className="w-full"
+                      />
+                    </FormGroup>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Ekstra hatırlatma: örn. 30 dakika önce ayrıca bildirim göndermek için 30 girin. 0 = kapalı.
+                  </p>
+                </div>
               </div>
             </div>
 

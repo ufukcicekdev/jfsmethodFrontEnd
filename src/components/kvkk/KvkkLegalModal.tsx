@@ -1,24 +1,42 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   ACIK_RIZA_DOCUMENT,
   AYDINLATMA_DOCUMENT,
+  buildRandevuSozlesmesi,
+  type LegalDocument,
+  type CancelPolicy,
 } from "@/lib/kvkk/legal-content";
+import { api } from "@/lib/api";
 import { LegalDocumentView } from "./LegalDocumentView";
 
 interface KvkkLegalModalProps {
-  type: "aydinlatma" | "acik_riza";
+  type: "aydinlatma" | "acik_riza" | "randevu_sozlesmesi";
   onClose: () => void;
 }
 
+const TITLES: Record<KvkkLegalModalProps["type"], string> = {
+  aydinlatma: "KVKK Aydınlatma Metni",
+  acik_riza: "Açık Rıza Metni — Sağlık Verileri",
+  randevu_sozlesmesi: "Randevu & İptal Politikası",
+};
+
 export function KvkkLegalModal({ type, onClose }: KvkkLegalModalProps) {
-  const title =
-    type === "aydinlatma"
-      ? "KVKK Aydınlatma Metni"
-      : "Açık Rıza Metni — Sağlık Verileri";
-  const legalDoc =
-    type === "aydinlatma" ? AYDINLATMA_DOCUMENT : ACIK_RIZA_DOCUMENT;
+  const [legalDoc, setLegalDoc] = useState<LegalDocument | null>(null);
+
+  useEffect(() => {
+    if (type === "aydinlatma") {
+      setLegalDoc(AYDINLATMA_DOCUMENT);
+    } else if (type === "acik_riza") {
+      setLegalDoc(ACIK_RIZA_DOCUMENT);
+    } else {
+      api.appointments
+        .cancelPolicy()
+        .then((policy: CancelPolicy) => setLegalDoc(buildRandevuSozlesmesi(policy)))
+        .catch(() => setLegalDoc(buildRandevuSozlesmesi()));
+    }
+  }, [type]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -53,7 +71,7 @@ export function KvkkLegalModal({ type, onClose }: KvkkLegalModalProps) {
               id="kvkk-modal-title"
               className="mt-0.5 text-lg font-bold text-slate-900"
             >
-              {title}
+              {TITLES[type]}
             </h2>
           </div>
           <button
@@ -69,7 +87,13 @@ export function KvkkLegalModal({ type, onClose }: KvkkLegalModalProps) {
         </div>
 
         <div className="kvkk-scroll min-h-0 flex-1 overflow-y-auto bg-white px-6 py-6 sm:px-8">
-          <LegalDocumentView document={legalDoc} />
+          {legalDoc ? (
+            <LegalDocumentView document={legalDoc} />
+          ) : (
+            <div className="flex justify-center py-12">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-200 border-t-blue-500" />
+            </div>
+          )}
         </div>
 
         <div className="flex shrink-0 justify-end border-t border-slate-200/80 bg-white/90 px-6 py-4 backdrop-blur-md">

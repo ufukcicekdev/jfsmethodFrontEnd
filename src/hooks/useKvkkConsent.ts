@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 export function useKvkkConsent() {
   const [kvkkAccepted, setKvkkAccepted] = useState(false);
   const [acikRizaAccepted, setAcikRizaAccepted] = useState(false);
-  const [legalModal, setLegalModal] = useState<"aydinlatma" | "acik_riza" | null>(
+  const [legalModal, setLegalModal] = useState<"aydinlatma" | "acik_riza" | "randevu_sozlesmesi" | null>(
     null
   );
 

@@ -534,6 +534,9 @@ export interface ClinicSchedule {
   slot_break_minutes: number;
   free_cancel_hours: number;
   late_cancel_penalty_minutes: number;
+  reminder_24h_enabled: boolean;
+  reminder_1h_enabled: boolean;
+  reminder_custom_minutes: number;
   working_days: WorkingDaySchedule[];
   holidays: ClinicHoliday[];
 }
@@ -544,6 +547,9 @@ export interface ClinicScheduleUpdatePayload {
   slot_break_minutes?: number;
   free_cancel_hours?: number;
   late_cancel_penalty_minutes?: number;
+  reminder_24h_enabled?: boolean;
+  reminder_1h_enabled?: boolean;
+  reminder_custom_minutes?: number;
   working_days: {
     day_of_week: number;
     is_working: boolean;
@@ -905,6 +911,11 @@ export const api = {
       );
     },
 
+    cancelPolicy: () =>
+      apiFetch<{ free_cancel_hours: number; late_cancel_penalty_minutes: number }>(
+        "/appointments/cancel-policy/"
+      ),
+
     book: (token: string, data: BookAppointmentPayload) =>
       apiFetch<Appointment>("/appointments/", {
         method: "POST",
@@ -1066,6 +1077,7 @@ export const api = {
         plan_id?: number;
         name?: string;
         total_sessions?: number;
+        used_sessions?: number;
         price?: string | number;
         purchased_at: string;
         note?: string;
