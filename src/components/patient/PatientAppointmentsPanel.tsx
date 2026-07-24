@@ -14,6 +14,7 @@ import {
   api,
   type Appointment,
   type AvailableSlot,
+  type SessionPackage,
   type SiteSettings,
 } from "@/lib/api";
 import { AddToCalendarButton } from "@/components/patient/AddToCalendarButton";
@@ -48,6 +49,7 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [activePackage, setActivePackage] = useState<SessionPackage | null | undefined>(undefined);
   const [success, setSuccess] = useState(false);
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
@@ -74,6 +76,21 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
   useEffect(() => {
     setToken(getAccessToken());
   }, [user]);
+
+  useEffect(() => {
+    if (!token) return;
+    api.packages
+      .me(token)
+      .then((pkgs) => {
+        const active = pkgs.find(
+          (p) =>
+            p.is_active &&
+            p.remaining_sessions - p.scheduled_count > 0
+        );
+        setActivePackage(active ?? null);
+      })
+      .catch(() => setActivePackage(null));
+  }, [token]);
 
   useEffect(() => {
     if (!token) return;
@@ -164,10 +181,29 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
     (appointment.status === "pending" || appointment.status === "approved") &&
     new Date(appointment.appointment_datetime) >= new Date();
 
+  const hasBookablePackage = activePackage !== null && activePackage !== undefined;
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {!compact && (
         <GlassCard className="p-4 sm:p-6">
+          {activePackage === null && (
+            <div className="mb-5 rounded-xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 dark:border-amber-800/50 dark:bg-amber-950/30">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                Aktif paketiniz bulunmuyor
+              </p>
+              <p className="mt-1 text-sm text-amber-800/90 dark:text-amber-300/90">
+                Randevu alabilmek için aktif bir seans paketi gereklidir. Paketler
+                sayfasından mevcut paket planlarını inceleyebilirsiniz.
+              </p>
+              <Link
+                href="/hesabim/paketler"
+                className="mt-2 inline-block text-sm font-medium text-amber-800 underline dark:text-amber-300"
+              >
+                Paketlere git →
+              </Link>
+            </div>
+          )}
           {success ? (
             <div className="text-center">
               <p className="text-lg font-semibold text-emerald-600">
@@ -257,7 +293,7 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
 
               <button
                 type="submit"
-                disabled={!isValid || !selectedSlot || loading}
+                disabled={!isValid || !selectedSlot || loading || !hasBookablePackage}
                 className="w-full rounded-full bg-blue-500 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50 sm:w-auto"
               >
                 {loading ? "Randevu oluşturuluyor…" : "Randevu Al"}

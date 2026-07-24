@@ -6,6 +6,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getAccessToken } from "@/lib/auth";
 import { api, type AdminNotification } from "@/lib/api";
 
+type ActionState = { id: number; action: "approve" | "reject" } | null;
+
 const TYPE_STYLES: Record<string, string> = {
   appointment_new: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300",
   appointment_cancelled:
@@ -57,6 +59,7 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [actionState, setActionState] = useState<ActionState>(null);
 
   const fetchNotifications = useCallback(async () => {
     const token = getAccessToken();
@@ -139,6 +142,31 @@ export function NotificationBell() {
     }
   };
 
+  const handleQuickAction = async (
+    e: React.MouseEvent,
+    notification: AdminNotification,
+    action: "approve" | "reject"
+  ) => {
+    e.stopPropagation();
+    const token = getAccessToken();
+    if (!token || !notification.appointment_id) return;
+
+    setActionState({ id: notification.id, action });
+    try {
+      await api.admin.updateAppointmentStatus(token, notification.appointment_id, {
+        status: action === "approve" ? "approved" : "cancelled",
+      });
+      if (!notification.is_read) {
+        await api.admin.markNotificationRead(token, notification.id);
+      }
+      await fetchNotifications();
+    } catch {
+      /* ignore */
+    } finally {
+      setActionState(null);
+    }
+  };
+
   return (
     <div ref={containerRef} className="relative">
       <button
@@ -184,39 +212,79 @@ export function NotificationBell() {
               </p>
             ) : (
               <ul>
-                {notifications.map((notification) => (
-                  <li key={notification.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleNotificationClick(notification)}
-                      className={`w-full border-b border-slate-100 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60 ${
-                        !notification.is_read
-                          ? "bg-blue-50/50 dark:bg-blue-950/20"
-                          : ""
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                            TYPE_STYLES[notification.notification_type] ??
-                            "bg-slate-100 text-slate-600"
-                          }`}
+                {notifications.map((notification) => {
+                  const isPending =
+                    notification.notification_type === "appointment_new" &&
+                    notification.appointment_id;
+                  const isActing = actionState?.id === notification.id;
+
+                  return (
+                    <li key={notification.id}>
+                      <div
+                        className={`border-b border-slate-100 dark:border-slate-800 ${
+                          !notification.is_read
+                            ? "bg-blue-50/50 dark:bg-blue-950/20"
+                            : ""
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleNotificationClick(notification)}
+                          className="w-full px-4 pt-3 pb-2 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
                         >
-                          {notification.type_label}
-                        </span>
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                          {formatRelativeTime(notification.created_at)}
-                        </span>
+                          <div className="flex items-start justify-between gap-2">
+                            <span
+                              className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                                TYPE_STYLES[notification.notification_type] ??
+                                "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {notification.type_label}
+                            </span>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                              {formatRelativeTime(notification.created_at)}
+                            </span>
+                          </div>
+                          <p className="mt-1.5 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            {notification.title}
+                          </p>
+                          <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">
+                            {notification.message}
+                          </p>
+                        </button>
+
+                        {isPending && (
+                          <div className="flex gap-2 px-4 pb-3">
+                            <button
+                              type="button"
+                              disabled={isActing}
+                              onClick={(e) =>
+                                handleQuickAction(e, notification, "approve")
+                              }
+                              className="flex-1 rounded-full bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
+                            >
+                              {isActing && actionState?.action === "approve"
+                                ? "Onaylanıyor…"
+                                : "Onayla"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isActing}
+                              onClick={(e) =>
+                                handleQuickAction(e, notification, "reject")
+                              }
+                              className="flex-1 rounded-full border border-red-400/60 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-950/30"
+                            >
+                              {isActing && actionState?.action === "reject"
+                                ? "Reddediliyor…"
+                                : "Reddet"}
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <p className="mt-1.5 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        {notification.title}
-                      </p>
-                      <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">
-                        {notification.message}
-                      </p>
-                    </button>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

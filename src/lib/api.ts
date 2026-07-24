@@ -489,6 +489,15 @@ export interface ClinicHoliday {
   created_at: string;
 }
 
+export interface SlotBlock {
+  id: number;
+  date: string;
+  start_time: string;
+  end_time: string;
+  reason: string;
+  created_at: string;
+}
+
 export interface ClinicSchedule {
   slot_duration_minutes: number;
   slot_capacity: number;
@@ -638,6 +647,7 @@ export interface AdminNotification {
   message: string;
   link: string;
   actor_name: string | null;
+  appointment_id: number | null;
   is_read: boolean;
   created_at: string;
 }
@@ -1262,6 +1272,25 @@ export const api = {
       apiFetch<DayCancellationResult>("/admin/schedule/cancel-day/", {
         method: "POST",
         body: JSON.stringify(data),
+        token,
+      }),
+
+    getSlotBlocks: (token: string) =>
+      apiFetch<SlotBlock[]>("/admin/schedule/slot-blocks/", { token }),
+
+    addSlotBlock: (
+      token: string,
+      data: { date: string; start_time: string; end_time: string; reason?: string }
+    ) =>
+      apiFetch<SlotBlock>("/admin/schedule/slot-blocks/", {
+        method: "POST",
+        body: JSON.stringify(data),
+        token,
+      }),
+
+    deleteSlotBlock: (token: string, id: number) =>
+      apiFetch<void>(`/admin/schedule/slot-blocks/${id}/`, {
+        method: "DELETE",
         token,
       }),
 
