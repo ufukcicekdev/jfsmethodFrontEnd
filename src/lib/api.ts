@@ -1776,6 +1776,14 @@ export const api = {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       }),
+    downloadPatientReport: (token: string, patientId: number, format: "xlsx" | "pdf") =>
+      fetch(`${API_BASE}/admin/patients/${patientId}/report/?format=${format}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    downloadAllPatientsReport: (token: string, format: "xlsx" | "pdf") =>
+      fetch(`${API_BASE}/admin/patients/report/?format=${format}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
   },
   myDiets: {
     list: (token: string) => apiFetch<DietPlan[]>("/my-diets/", { token }),

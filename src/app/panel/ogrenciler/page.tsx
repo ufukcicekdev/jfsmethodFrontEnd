@@ -20,6 +20,47 @@ function formatDate(value: string | null) {
 
 const todayIso = new Date().toISOString().slice(0, 10);
 
+function DownloadAllReportButton() {
+  const [busy, setBusy] = useState(false);
+
+  const download = async (fmt: "xlsx" | "pdf") => {
+    const token = getAccessToken();
+    if (!token || busy) return;
+    setBusy(true);
+    try {
+      const res = await api.admin.downloadAllPatientsReport(token, fmt);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ogrenciler_raporu.${fmt}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => download("xlsx")}
+        disabled={busy}
+        className="rounded-full border border-emerald-500/50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+      >
+        ↓ Excel Raporu
+      </button>
+      <button
+        onClick={() => download("pdf")}
+        disabled={busy}
+        className="rounded-full border border-blue-500/50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
+      >
+        ↓ PDF Raporu
+      </button>
+    </>
+  );
+}
+
 function AttendanceBar({
   patientId,
   activePackages,
@@ -58,7 +99,8 @@ function AttendanceBar({
         <select
           value={selectedPkgId}
           onChange={(e) => { e.stopPropagation(); setSelectedPkgId(Number(e.target.value) || ""); }}
-          className="rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 outline-none focus:border-blue-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+          className="appearance-none rounded-xl border border-slate-200/90 bg-white/80 px-3 py-1.5 pr-7 text-xs text-slate-700 shadow-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/25 dark:border-slate-600/60 dark:bg-slate-800/80 dark:text-slate-200"
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", backgroundSize: "14px" }}
         >
           <option value="">Paket seçin</option>
           {activePackages.map((p) => (
@@ -154,13 +196,16 @@ export default function StudentsPage() {
             Kayıtlı öğrencileri görüntüleyin, profil ve kilo takibini yönetin.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCreate((s) => !s)}
-          className="shrink-0 rounded-full bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-600"
-        >
-          {showCreate ? "Formu Kapat" : "+ Yeni Öğrenci"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <DownloadAllReportButton />
+          <button
+            type="button"
+            onClick={() => setShowCreate((s) => !s)}
+            className="shrink-0 rounded-full bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-600"
+          >
+            {showCreate ? "Formu Kapat" : "+ Yeni Öğrenci"}
+          </button>
+        </div>
       </div>
 
       {showCreate && (

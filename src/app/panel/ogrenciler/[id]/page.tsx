@@ -15,6 +15,47 @@ import { getAccessToken } from "@/lib/auth";
 import { api, type AdminPatient, type PatientProgressPhoto } from "@/lib/api";
 import { calculateBMI, getBMICategory, getIdealWeightRange } from "@/lib/bmi";
 
+function DownloadReportButton({ patientId }: { patientId: number }) {
+  const [busy, setBusy] = useState(false);
+
+  const download = async (fmt: "xlsx" | "pdf") => {
+    const token = getAccessToken();
+    if (!token || busy) return;
+    setBusy(true);
+    try {
+      const res = await api.admin.downloadPatientReport(token, patientId, fmt);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ogrenci_raporu.${fmt}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex gap-1.5">
+      <button
+        onClick={() => download("xlsx")}
+        disabled={busy}
+        className="flex items-center gap-1.5 rounded-full border border-emerald-500/50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+      >
+        ↓ Excel
+      </button>
+      <button
+        onClick={() => download("pdf")}
+        disabled={busy}
+        className="flex items-center gap-1.5 rounded-full border border-blue-500/50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
+      >
+        ↓ PDF
+      </button>
+    </div>
+  );
+}
+
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString("tr-TR", {
     day: "2-digit",
@@ -215,7 +256,7 @@ export default function StudentDetailPage() {
             @{patient.username} · {patient.email}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {bmi && category && (
             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${category.colorClass} bg-slate-100 dark:bg-slate-800`}>
               BMI {bmi.toFixed(1)} · {category.label}
@@ -224,6 +265,7 @@ export default function StudentDetailPage() {
           <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
             {patient.weight ? `${patient.weight} kg` : "Kilo yok"}
           </span>
+          <DownloadReportButton patientId={id} />
         </div>
       </div>
 
