@@ -70,10 +70,10 @@ export default function LoginPage() {
           <GlassCard className="p-6 sm:p-8">
             <form onSubmit={handleSubmit} className="space-y-5">
               <FormField
-                label="Kullanıcı Adı"
+                label="Kullanıcı Adı veya E-posta"
                 name="username"
                 type="text"
-                placeholder="kullanici_adi"
+                placeholder="kullanici_adi veya ornek@mail.com"
                 required
                 autoComplete="username"
                 value={form.username}
