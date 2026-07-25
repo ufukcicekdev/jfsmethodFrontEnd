@@ -41,7 +41,12 @@ export default function PanelDashboardPage() {
       href: "/panel/ogrenciler",
       color: "text-violet-600 dark:text-violet-400",
       icon: "✅",
-      sub: stats ? `${stats.students_completed_today} öğrenci` : undefined,
+      sub: stats
+        ? stats.students_completed_today === 0
+          ? "Henüz kimse tamamlamadı"
+          : stats.students_completed_today_names.slice(0, 3).join(", ") +
+            (stats.students_completed_today > 3 ? ` +${stats.students_completed_today - 3} kişi` : "")
+        : undefined,
     },
     {
       label: "Bu Hafta Tamamlanan",

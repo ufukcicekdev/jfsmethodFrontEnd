@@ -326,6 +326,7 @@ export interface AdminDashboard {
   completions_today: number;
   completions_this_week: number;
   students_completed_today: number;
+  students_completed_today_names: string[];
 }
 
 export type PhotoCategory =
