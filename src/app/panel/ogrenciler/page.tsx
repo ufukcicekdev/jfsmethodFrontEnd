@@ -18,6 +18,8 @@ function formatDate(value: string | null) {
   });
 }
 
+const todayIso = new Date().toISOString().slice(0, 10);
+
 function AttendanceBar({
   patientId,
   todayAttendance,
@@ -30,74 +32,76 @@ function AttendanceBar({
   onMarked: (status: "came" | "no_show" | null, packageId?: number) => void;
 }) {
   const [busy, setBusy] = useState(false);
-  const [pickingPackage, setPickingPackage] = useState(false);
+  const [pickingPackage, setPickingPackage] = useState<"came" | "no_show" | null>(null);
+  const [date, setDate] = useState(todayIso);
+  const isToday = date === todayIso;
 
   const doMark = async (s: "came" | "no_show", packageId?: number) => {
     const token = getAccessToken();
     if (!token || busy) return;
     setBusy(true);
     try {
-      if (todayAttendance?.status === s) {
+      if (isToday && todayAttendance?.status === s) {
         await api.admin.removeAttendance(token, patientId);
         onMarked(null);
       } else {
-        await api.admin.markAttendance(token, patientId, s, undefined, packageId);
-        onMarked(s, packageId);
+        await api.admin.markAttendance(token, patientId, s, date, packageId);
+        if (isToday) onMarked(s, packageId);
       }
     } finally {
       setBusy(false);
-      setPickingPackage(false);
+      setPickingPackage(null);
     }
   };
 
-  const handleCame = (e: React.MouseEvent) => {
+  const handleMark = (s: "came" | "no_show") => (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (todayAttendance?.status === "came") { doMark("came"); return; }
-    if (activePackages.length > 1) { setPickingPackage(true); return; }
-    doMark("came", activePackages[0]?.id);
+    if (isToday && todayAttendance?.status === s) { doMark(s); return; }
+    if (activePackages.length > 1) { setPickingPackage(s); return; }
+    doMark(s, activePackages[0]?.id);
   };
 
-  const handleNoShow = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    doMark("no_show");
-  };
-
-  const came = todayAttendance?.status === "came";
-  const noShow = todayAttendance?.status === "no_show";
+  const came = isToday && todayAttendance?.status === "came";
+  const noShow = isToday && todayAttendance?.status === "no_show";
 
   return (
     <div
       className="flex flex-wrap items-center gap-2 border-t border-slate-200/60 bg-slate-50/50 px-4 py-2.5 dark:border-slate-700/40 dark:bg-slate-800/20"
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
     >
-      <span className="mr-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Bugün:</span>
+      <input
+        type="date"
+        value={date}
+        max={todayIso}
+        onChange={(e) => { e.stopPropagation(); setDate(e.target.value); setPickingPackage(null); }}
+        className="rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 outline-none focus:border-blue-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+      />
       <button
         type="button"
         disabled={busy}
-        onClick={handleCame}
+        onClick={handleMark("came")}
         className={`rounded-full px-3 py-0.5 text-xs font-semibold transition-colors disabled:opacity-50 ${came ? "bg-emerald-500 text-white" : "border border-emerald-400/60 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"}`}
       >
-        {busy && came ? "…" : "✓ Geldi"}
+        {busy ? "…" : "✓ Geldi"}
       </button>
       <button
         type="button"
         disabled={busy}
-        onClick={handleNoShow}
+        onClick={handleMark("no_show")}
         className={`rounded-full px-3 py-0.5 text-xs font-semibold transition-colors disabled:opacity-50 ${noShow ? "bg-orange-500 text-white" : "border border-orange-400/60 text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950/30"}`}
       >
-        {busy && noShow ? "…" : "✗ Gelmedi"}
+        {busy ? "…" : "✗ Gelmedi"}
       </button>
 
       {pickingPackage && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs text-slate-500 dark:text-slate-400">Hangi paketten düşsün?</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">Paket seçin:</span>
           {activePackages.map((pkg) => (
             <button
               key={pkg.id}
               type="button"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); doMark("came", pkg.id); }}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); doMark(pickingPackage, pkg.id); }}
               className="rounded-full border border-blue-400/60 px-3 py-0.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30"
             >
               {pkg.name} ({pkg.remaining} kaldı)
@@ -105,7 +109,7 @@ function AttendanceBar({
           ))}
           <button
             type="button"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPickingPackage(false); }}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPickingPackage(null); }}
             className="rounded-full px-2 py-0.5 text-xs text-slate-400 hover:text-slate-600"
           >
             iptal
