@@ -35,6 +35,21 @@ export default function PanelDashboardPage() {
       color: "text-emerald-600 dark:text-emerald-400",
       icon: "📦",
     },
+    {
+      label: "Bugün Tamamlanan Egzersiz",
+      value: stats?.completions_today ?? 0,
+      href: "/panel/ogrenciler",
+      color: "text-violet-600 dark:text-violet-400",
+      icon: "✅",
+      sub: stats ? `${stats.students_completed_today} öğrenci` : undefined,
+    },
+    {
+      label: "Bu Hafta Tamamlanan",
+      value: stats?.completions_this_week ?? 0,
+      href: "/panel/ogrenciler",
+      color: "text-amber-600 dark:text-amber-400",
+      icon: "📈",
+    },
   ];
 
   return (
@@ -67,6 +82,9 @@ export default function PanelDashboardPage() {
                   <p className={`mt-3 text-3xl font-bold ${card.color}`}>
                     {card.value}
                   </p>
+                  {"sub" in card && card.sub && (
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{card.sub}</p>
+                  )}
                 </GlassCard>
               </Link>
             ))}

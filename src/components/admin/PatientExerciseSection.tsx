@@ -197,13 +197,29 @@ export function PatientExerciseSection({
               key={assignment.id}
               className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-slate-200/80 px-4 py-3 dark:border-slate-600/50"
             >
-              <div>
-                <p className="font-medium text-slate-900 dark:text-slate-100">
-                  {assignment.exercise.title}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">
+                    {assignment.exercise.title}
+                  </p>
+                  {assignment.completed_today && (
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                      ✓ Bugün tamamlandı
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                   {assignment.frequency_label} · Bu hafta{" "}
-                  {assignment.completions_this_week} tamamlama
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    {assignment.completions_this_week}
+                  </span>{" "}
+                  tamamlama
+                  {assignment.last_completed_at && (
+                    <> · Son: {new Date(assignment.last_completed_at).toLocaleDateString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</>
+                  )}
+                  {!assignment.last_completed_at && (
+                    <span className="ml-1 text-amber-500 dark:text-amber-400">· Henüz tamamlanmadı</span>
+                  )}
                 </p>
                 {assignment.therapist_note && (
                   <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">

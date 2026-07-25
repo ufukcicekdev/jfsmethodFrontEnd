@@ -28,12 +28,6 @@ export default function PatientProfilePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [newWeight, setNewWeight] = useState("");
-  const [passwordForm, setPasswordForm] = useState({
-    current: "",
-    next: "",
-    confirm: "",
-  });
-  const [changingPassword, setChangingPassword] = useState(false);
   const [form, setForm] = useState({
     height: "",
     weight: "",
@@ -137,31 +131,6 @@ export default function PatientProfilePage() {
     }
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const token = getAccessToken();
-    if (!token) return;
-    if (passwordForm.next !== passwordForm.confirm) {
-      setError("Yeni şifreler eşleşmiyor.");
-      return;
-    }
-
-    setChangingPassword(true);
-    setError("");
-    setSuccess("");
-    try {
-      await api.auth.changePassword(token, {
-        current_password: passwordForm.current,
-        new_password: passwordForm.next,
-      });
-      setPasswordForm({ current: "", next: "", confirm: "" });
-      setSuccess("Şifreniz güncellendi.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Şifre güncellenemedi.");
-    } finally {
-      setChangingPassword(false);
-    }
-  };
 
   const handleAddWeight = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -495,55 +464,6 @@ export default function PatientProfilePage() {
         )}
       </GlassCard>
 
-      <GlassCard className="p-4 sm:p-6">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
-          Şifre Değiştir
-        </h2>
-        <form onSubmit={handleChangePassword} className="mt-4 max-w-md space-y-4">
-          <FormField
-            label="Mevcut şifre"
-            name="current_password"
-            type="password"
-            required
-            autoComplete="current-password"
-            value={passwordForm.current}
-            onChange={(e) =>
-              setPasswordForm((f) => ({ ...f, current: e.target.value }))
-            }
-          />
-          <FormField
-            label="Yeni şifre"
-            name="new_password"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            value={passwordForm.next}
-            onChange={(e) =>
-              setPasswordForm((f) => ({ ...f, next: e.target.value }))
-            }
-          />
-          <FormField
-            label="Yeni şifre (tekrar)"
-            name="confirm_password"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            value={passwordForm.confirm}
-            onChange={(e) =>
-              setPasswordForm((f) => ({ ...f, confirm: e.target.value }))
-            }
-          />
-          <button
-            type="submit"
-            disabled={changingPassword}
-            className="rounded-full bg-slate-800 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-900 disabled:opacity-50 dark:bg-slate-700 dark:hover:bg-slate-600"
-          >
-            {changingPassword ? "Güncelleniyor…" : "Şifreyi Güncelle"}
-          </button>
-        </form>
-      </GlassCard>
     </div>
   );
 }

@@ -323,6 +323,9 @@ export interface AdminDashboard {
   active_packages: number;
   weekly_attendance: { week_start: string; count: number }[];
   top_exercises: { title: string; count: number }[];
+  completions_today: number;
+  completions_this_week: number;
+  students_completed_today: number;
 }
 
 export type PhotoCategory =
