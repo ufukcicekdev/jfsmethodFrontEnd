@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { FormInput } from "@/components/ui/FormField";
 import { AdminCreatePatientForm } from "@/components/admin/AdminCreatePatientForm";
@@ -60,7 +61,7 @@ function PkgDropdown({
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      {open && rect && (
+      {open && rect && typeof document !== "undefined" && createPortal(
         <ul
           onMouseDown={(e) => e.stopPropagation()}
           style={{ position: "fixed", top: rect.bottom + 4, left: rect.left, minWidth: rect.width, zIndex: 9999 }}
@@ -80,7 +81,8 @@ function PkgDropdown({
               </button>
             </li>
           ))}
-        </ul>
+        </ul>,
+        document.body
       )}
     </div>
   );
