@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { FormInput } from "@/components/ui/FormField";
 import { AdminCreatePatientForm } from "@/components/admin/AdminCreatePatientForm";
@@ -19,6 +19,68 @@ function formatDate(value: string | null) {
 }
 
 const todayIso = new Date().toISOString().slice(0, 10);
+
+function PkgDropdown({
+  packages,
+  value,
+  onChange,
+}: {
+  packages: { id: number; name: string; remaining: number }[];
+  value: number | "";
+  onChange: (v: number | "") => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = packages.find((p) => p.id === value);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        className="flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:border-slate-300 hover:bg-white focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/25 dark:border-slate-600/60 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-800"
+      >
+        <span>{selected ? `${selected.name} (${selected.remaining} kaldı)` : "Paket seçin"}</span>
+        <svg className={`h-3.5 w-3.5 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && (
+        <ul className="absolute left-0 top-full z-50 mt-1 min-w-[200px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
+          <li>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onChange(""); setOpen(false); }}
+              className="w-full px-3 py-2 text-left text-xs text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700/50"
+            >
+              Paket seçin…
+            </button>
+          </li>
+          {packages.map((p) => (
+            <li key={p.id}>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onChange(p.id); setOpen(false); }}
+                className={`w-full px-3 py-2 text-left text-xs hover:bg-blue-50 dark:hover:bg-blue-950/30 ${value === p.id ? "font-semibold text-blue-600 dark:text-blue-400" : "text-slate-700 dark:text-slate-200"}`}
+              >
+                {p.name} <span className="text-slate-400">({p.remaining} kaldı)</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 function DownloadAllReportButton() {
   const [busy, setBusy] = useState(false);
@@ -96,17 +158,11 @@ function AttendanceBar({
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
     >
       {activePackages.length > 1 && (
-        <select
+        <PkgDropdown
+          packages={activePackages}
           value={selectedPkgId}
-          onChange={(e) => { e.stopPropagation(); setSelectedPkgId(Number(e.target.value) || ""); }}
-          className="appearance-none rounded-xl border border-slate-200/90 bg-white/80 px-3 py-1.5 pr-7 text-xs text-slate-700 shadow-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/25 dark:border-slate-600/60 dark:bg-slate-800/80 dark:text-slate-200"
-          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", backgroundSize: "14px" }}
-        >
-          <option value="">Paket seçin</option>
-          {activePackages.map((p) => (
-            <option key={p.id} value={p.id}>{p.name} ({p.remaining} kaldı)</option>
-          ))}
-        </select>
+          onChange={setSelectedPkgId}
+        />
       )}
       {activePackages.length === 1 && (
         <span className="text-xs text-slate-500 dark:text-slate-400">
