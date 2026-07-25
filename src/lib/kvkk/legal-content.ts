@@ -27,7 +27,7 @@ export const AYDINLATMA_DOCUMENT: LegalDocument = {
   subtitle: `KVKK Aydınlatma Metni (${KVKK_VERSION})`,
   meta: [
     { label: "Veri Sorumlusu", value: "JFS Method Hareket Danışmanlığı" },
-    { label: "İletişim", value: "kvkk@jfsmethod.com" },
+    { label: "İletişim", value: "info@jfsmethod.com" },
   ],
   sections: [
     {
@@ -61,7 +61,7 @@ export const AYDINLATMA_DOCUMENT: LegalDocument = {
       title: "5. Haklarınız",
       paragraphs: [
         "KVKK m.11 kapsamında; erişim, düzeltme, silme, işlemeyi kısıtlama, itiraz ve veri taşınabilirliği haklarına sahipsiniz.",
-        "Başvuru: kvkk@jfsmethod.com",
+        "Başvuru: info@jfsmethod.com",
       ],
     },
   ],
@@ -71,7 +71,7 @@ export const ACIK_RIZA_DOCUMENT: LegalDocument = {
   subtitle: `Özel Nitelikli Sağlık Verileri Açık Rıza Metni (${KVKK_VERSION})`,
   meta: [
     { label: "Yasal Dayanak", value: "6698 sayılı KVKK m.6" },
-    { label: "İletişim", value: "kvkk@jfsmethod.com" },
+    { label: "İletişim", value: "info@jfsmethod.com" },
   ],
   sections: [
     {
@@ -94,7 +94,7 @@ export const ACIK_RIZA_DOCUMENT: LegalDocument = {
     {
       title: "Rızanın Geri Çekilmesi",
       paragraphs: [
-        "Bu rızayı dilediğiniz zaman kvkk@jfsmethod.com adresine başvurarak geri çekebilirsiniz. Rızanın geri çekilmesi, geri çekme öncesi işleme faaliyetlerinin hukuka uygunluğunu etkilemez.",
+        "Bu rızayı dilediğiniz zaman info@jfsmethod.com adresine başvurarak geri çekebilirsiniz. Rızanın geri çekilmesi, geri çekme öncesi işleme faaliyetlerinin hukuka uygunluğunu etkilemez.",
       ],
     },
   ],
