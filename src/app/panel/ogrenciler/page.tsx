@@ -30,23 +30,29 @@ function PkgDropdown({
   onChange: (v: number | "") => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
   const selected = packages.find((p) => p.id === value);
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
+    const handler = (e: MouseEvent) => { setOpen(false); };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  const handleOpen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (btnRef.current) setRect(btnRef.current.getBoundingClientRect());
+    setOpen((o) => !o);
+  };
+
   return (
-    <div ref={ref} className="relative" onClick={(e) => e.stopPropagation()}>
+    <div onClick={(e) => e.stopPropagation()}>
       <button
+        ref={btnRef}
         type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        onClick={handleOpen}
         className="flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:border-slate-300 hover:bg-white focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/25 dark:border-slate-600/60 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-800"
       >
         <span>{selected ? `${selected.name} (${selected.remaining} kaldı)` : "Paket seçin"}</span>
@@ -54,24 +60,22 @@ function PkgDropdown({
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      {open && (
-        <ul className="absolute left-0 top-full z-50 mt-1 min-w-[200px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
+      {open && rect && (
+        <ul
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{ position: "fixed", top: rect.bottom + 4, left: rect.left, minWidth: rect.width, zIndex: 9999 }}
+          className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800"
+        >
           <li>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onChange(""); setOpen(false); }}
-              className="w-full px-3 py-2 text-left text-xs text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700/50"
-            >
+            <button type="button" onClick={(e) => { e.stopPropagation(); onChange(""); setOpen(false); }}
+              className="w-full px-3 py-2 text-left text-xs text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700/50">
               Paket seçin…
             </button>
           </li>
           {packages.map((p) => (
             <li key={p.id}>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onChange(p.id); setOpen(false); }}
-                className={`w-full px-3 py-2 text-left text-xs hover:bg-blue-50 dark:hover:bg-blue-950/30 ${value === p.id ? "font-semibold text-blue-600 dark:text-blue-400" : "text-slate-700 dark:text-slate-200"}`}
-              >
+              <button type="button" onClick={(e) => { e.stopPropagation(); onChange(p.id); setOpen(false); }}
+                className={`w-full px-3 py-2 text-left text-xs hover:bg-blue-50 dark:hover:bg-blue-950/30 ${value === p.id ? "font-semibold text-blue-600 dark:text-blue-400" : "text-slate-700 dark:text-slate-200"}`}>
                 {p.name} <span className="text-slate-400">({p.remaining} kaldı)</span>
               </button>
             </li>
