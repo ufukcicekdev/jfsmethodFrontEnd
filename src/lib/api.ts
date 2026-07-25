@@ -1787,11 +1787,11 @@ export const api = {
         headers: { Authorization: `Bearer ${token}` },
       }),
     downloadPatientReport: (token: string, patientId: number, format: "xlsx" | "pdf") =>
-      fetch(`${API_BASE}/admin/patients/${patientId}/report/?format=${format}`, {
+      fetch(`${API_BASE}/admin/patients/${patientId}/report/?report_format=${format}`, {
         headers: { Authorization: `Bearer ${token}` },
       }),
     downloadAllPatientsReport: (token: string, format: "xlsx" | "pdf") =>
-      fetch(`${API_BASE}/admin/patients/report/?format=${format}`, {
+      fetch(`${API_BASE}/admin/patients/report/?report_format=${format}`, {
         headers: { Authorization: `Bearer ${token}` },
       }),
   },
