@@ -1776,6 +1776,16 @@ export const api = {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       }),
+    packageAttendanceHistory: (token: string, patientId: number, packageId: number) =>
+      apiFetch<{ id: number; date: string; status: "came" | "no_show"; note: string }[]>(
+        `/admin/patients/${patientId}/packages/${packageId}/attendance/`,
+        { token }
+      ),
+    deleteAttendanceRecord: (token: string, patientId: number, packageId: number, recordId: number) =>
+      fetch(`${API_BASE}/admin/patients/${patientId}/packages/${packageId}/attendance/?record_id=${recordId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
     downloadPatientReport: (token: string, patientId: number, format: "xlsx" | "pdf") =>
       fetch(`${API_BASE}/admin/patients/${patientId}/report/?format=${format}`, {
         headers: { Authorization: `Bearer ${token}` },

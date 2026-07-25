@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
@@ -65,6 +65,100 @@ function formatDateTime(value: string) {
   });
 }
 
+type AttendanceRecord = { id: number; date: string; status: "came" | "no_show"; note: string };
+
+function PackageAttendanceAccordion({
+  patientId,
+  pkg,
+  open,
+  onToggle,
+  onChanged,
+}: {
+  patientId: number;
+  pkg: SessionPackage;
+  open: boolean;
+  onToggle: () => void;
+  onChanged: () => void;
+}) {
+  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const token = getAccessToken();
+    if (!token) return;
+    setLoading(true);
+    api.admin.packageAttendanceHistory(token, patientId, pkg.id)
+      .then(setRecords)
+      .catch(() => setRecords([]))
+      .finally(() => setLoading(false));
+  }, [open, patientId, pkg.id]);
+
+  const handleDelete = async (recordId: number) => {
+    const token = getAccessToken();
+    if (!token) return;
+    setDeletingId(recordId);
+    try {
+      await api.admin.deleteAttendanceRecord(token, patientId, pkg.id, recordId);
+      setRecords((prev) => prev.filter((r) => r.id !== recordId));
+      onChanged();
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  return (
+    <div className="mt-2 border-t border-slate-200/60 pt-2 dark:border-slate-700/40">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+      >
+        <svg className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+        Devam Geçmişi ({pkg.used_sessions + pkg.no_show_count} kayıt)
+      </button>
+
+      {open && (
+        <div className="mt-2">
+          {loading ? (
+            <p className="text-xs text-slate-400">Yükleniyor…</p>
+          ) : records.length === 0 ? (
+            <p className="text-xs text-slate-400">Henüz kayıt yok.</p>
+          ) : (
+            <ul className="space-y-1">
+              {records.map((rec) => (
+                <li key={rec.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-1.5 dark:bg-slate-800/50">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${rec.status === "came" ? "bg-emerald-500" : "bg-orange-500"}`} />
+                    <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                      {new Date(rec.date).toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "numeric" })}
+                    </span>
+                    <span className={`text-xs ${rec.status === "came" ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"}`}>
+                      {rec.status === "came" ? "Geldi" : "Gelmedi"}
+                    </span>
+                    {rec.note && <span className="text-xs text-slate-400">{rec.note}</span>}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={deletingId === rec.id}
+                    onClick={() => handleDelete(rec.id)}
+                    className="text-xs text-red-400 hover:text-red-600 disabled:opacity-50"
+                  >
+                    {deletingId === rec.id ? "…" : "Sil"}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface PatientPackageSectionProps {
   patientId: number;
   packages: SessionPackage[];
@@ -111,6 +205,7 @@ export function PatientPackageSection({
   // per-package attendance date state: pkgId -> date string
   const [pkgAttendanceDates, setPkgAttendanceDates] = useState<Record<number, string>>({});
   const [pkgAttendanceBusy, setPkgAttendanceBusy] = useState<number | null>(null);
+  const [openHistoryPkgId, setOpenHistoryPkgId] = useState<number | null>(null);
 
   useEffect(() => {
     setLocalHistory(attendance?.history ?? []);
@@ -439,6 +534,14 @@ export function PatientPackageSection({
                     {pkg.note}
                   </p>
                 )}
+
+                <PackageAttendanceAccordion
+                  patientId={patientId}
+                  pkg={pkg}
+                  open={openHistoryPkgId === pkg.id}
+                  onToggle={() => setOpenHistoryPkgId((prev) => prev === pkg.id ? null : pkg.id)}
+                  onChanged={onChanged}
+                />
               </div>
             );
           })
