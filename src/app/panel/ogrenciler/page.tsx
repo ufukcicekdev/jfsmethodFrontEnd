@@ -95,6 +95,7 @@ function DownloadAllReportButton() {
     setBusy(true);
     try {
       const res = await api.admin.downloadAllPatientsReport(token, fmt);
+      if (!res.ok) throw new Error(`Sunucu hatası: ${res.status}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -102,6 +103,8 @@ function DownloadAllReportButton() {
       a.download = `ogrenciler_raporu.${fmt}`;
       a.click();
       URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Rapor indirilemedi.");
     } finally {
       setBusy(false);
     }

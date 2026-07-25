@@ -24,6 +24,7 @@ function DownloadReportButton({ patientId }: { patientId: number }) {
     setBusy(true);
     try {
       const res = await api.admin.downloadPatientReport(token, patientId, fmt);
+      if (!res.ok) throw new Error(`Sunucu hatası: ${res.status}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
