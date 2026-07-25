@@ -37,9 +37,13 @@ function PkgDropdown({
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e: MouseEvent) => { setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    const close = () => setOpen(false);
+    document.addEventListener("mousedown", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      window.removeEventListener("scroll", close, true);
+    };
   }, [open]);
 
   const handleOpen = (e: React.MouseEvent) => {
