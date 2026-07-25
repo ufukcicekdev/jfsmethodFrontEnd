@@ -22,100 +22,78 @@ const todayIso = new Date().toISOString().slice(0, 10);
 
 function AttendanceBar({
   patientId,
-  todayAttendance,
   activePackages,
   onMarked,
 }: {
   patientId: number;
-  todayAttendance: { id: number; status: "came" | "no_show"; package_id?: number | null } | null;
   activePackages: { id: number; name: string; remaining: number }[];
-  onMarked: (status: "came" | "no_show" | null, packageId?: number) => void;
+  onMarked: () => void;
 }) {
   const [busy, setBusy] = useState(false);
-  const [pickingPackage, setPickingPackage] = useState<"came" | "no_show" | null>(null);
   const [date, setDate] = useState(todayIso);
-  const isToday = date === todayIso;
+  const [selectedPkgId, setSelectedPkgId] = useState<number | "">(
+    activePackages.length === 1 ? activePackages[0].id : ""
+  );
 
-  const doMark = async (s: "came" | "no_show", packageId?: number) => {
+  const doMark = async (s: "came" | "no_show") => {
     const token = getAccessToken();
     if (!token || busy) return;
     setBusy(true);
     try {
-      if (isToday && todayAttendance?.status === s) {
-        await api.admin.removeAttendance(token, patientId);
-        onMarked(null);
-      } else {
-        await api.admin.markAttendance(token, patientId, s, date, packageId);
-        if (isToday) onMarked(s, packageId);
-      }
+      await api.admin.markAttendance(token, patientId, s, date, selectedPkgId || undefined);
+      onMarked();
+    } catch {
+      // sessiz geç
     } finally {
       setBusy(false);
-      setPickingPackage(null);
     }
   };
-
-  const handleMark = (s: "came" | "no_show") => (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (isToday && todayAttendance?.status === s) { doMark(s); return; }
-    if (activePackages.length > 1) { setPickingPackage(s); return; }
-    doMark(s, activePackages[0]?.id);
-  };
-
-  const came = isToday && todayAttendance?.status === "came";
-  const noShow = isToday && todayAttendance?.status === "no_show";
 
   return (
     <div
       className="flex flex-wrap items-center gap-2 border-t border-slate-200/60 bg-slate-50/50 px-4 py-2.5 dark:border-slate-700/40 dark:bg-slate-800/20"
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
     >
+      {activePackages.length > 1 && (
+        <select
+          value={selectedPkgId}
+          onChange={(e) => { e.stopPropagation(); setSelectedPkgId(Number(e.target.value) || ""); }}
+          className="rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 outline-none focus:border-blue-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+        >
+          <option value="">Paket seçin</option>
+          {activePackages.map((p) => (
+            <option key={p.id} value={p.id}>{p.name} ({p.remaining} kaldı)</option>
+          ))}
+        </select>
+      )}
+      {activePackages.length === 1 && (
+        <span className="text-xs text-slate-500 dark:text-slate-400">
+          {activePackages[0].name} ({activePackages[0].remaining} kaldı)
+        </span>
+      )}
       <input
         type="date"
         value={date}
         max={todayIso}
-        onChange={(e) => { e.stopPropagation(); setDate(e.target.value); setPickingPackage(null); }}
+        onChange={(e) => { e.stopPropagation(); setDate(e.target.value); }}
         className="rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 outline-none focus:border-blue-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
       />
       <button
         type="button"
         disabled={busy}
-        onClick={handleMark("came")}
-        className={`rounded-full px-3 py-0.5 text-xs font-semibold transition-colors disabled:opacity-50 ${came ? "bg-emerald-500 text-white" : "border border-emerald-400/60 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"}`}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); doMark("came"); }}
+        className="rounded-full border border-emerald-400/60 px-3 py-0.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
       >
         {busy ? "…" : "✓ Geldi"}
       </button>
       <button
         type="button"
         disabled={busy}
-        onClick={handleMark("no_show")}
-        className={`rounded-full px-3 py-0.5 text-xs font-semibold transition-colors disabled:opacity-50 ${noShow ? "bg-orange-500 text-white" : "border border-orange-400/60 text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950/30"}`}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); doMark("no_show"); }}
+        className="rounded-full border border-orange-400/60 px-3 py-0.5 text-xs font-semibold text-orange-700 hover:bg-orange-50 disabled:opacity-50 dark:text-orange-400 dark:hover:bg-orange-950/30"
       >
         {busy ? "…" : "✗ Gelmedi"}
       </button>
-
-      {pickingPackage && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs text-slate-500 dark:text-slate-400">Paket seçin:</span>
-          {activePackages.map((pkg) => (
-            <button
-              key={pkg.id}
-              type="button"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); doMark(pickingPackage, pkg.id); }}
-              className="rounded-full border border-blue-400/60 px-3 py-0.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30"
-            >
-              {pkg.name} ({pkg.remaining} kaldı)
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPickingPackage(null); }}
-            className="rounded-full px-2 py-0.5 text-xs text-slate-400 hover:text-slate-600"
-          >
-            iptal
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -279,12 +257,13 @@ export default function StudentsPage() {
                   </div>
                 </Link>
 
-                <AttendanceBar
-                  patientId={patient.id}
-                  todayAttendance={patient.today_attendance}
-                  activePackages={patient.active_packages ?? []}
-                  onMarked={(status) => handleMarked(patient.id, status)}
-                />
+                {(patient.active_packages?.length ?? 0) > 0 && (
+                  <AttendanceBar
+                    patientId={patient.id}
+                    activePackages={patient.active_packages ?? []}
+                    onMarked={loadPatients}
+                  />
+                )}
               </GlassCard>
             );
           })}
