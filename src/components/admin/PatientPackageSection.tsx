@@ -107,11 +107,10 @@ export function PatientPackageSection({
   const [localHistory, setLocalHistory] = useState(attendance?.history ?? []);
   const [updatingApptId, setUpdatingApptId] = useState<number | null>(null);
   const [plans, setPlans] = useState<PackagePlan[]>([]);
-  const [form, setForm] = useState({
-    plan_id: 0,
-    is_paid: false,
-    used_sessions: 0,
-  });
+  const [form, setForm] = useState({ plan_id: 0, is_paid: false });
+  // per-package attendance date state: pkgId -> date string
+  const [pkgAttendanceDates, setPkgAttendanceDates] = useState<Record<number, string>>({});
+  const [pkgAttendanceBusy, setPkgAttendanceBusy] = useState<number | null>(null);
 
   useEffect(() => {
     setLocalHistory(attendance?.history ?? []);
@@ -159,9 +158,8 @@ export function PatientPackageSection({
         plan_id: form.plan_id,
         purchased_at: todayIso,
         is_paid: form.is_paid,
-        used_sessions: form.used_sessions > 0 ? form.used_sessions : undefined,
       });
-      setForm({ plan_id: 0, is_paid: false, used_sessions: 0 });
+      setForm({ plan_id: 0, is_paid: false });
       onMessage("Paket atandı.", "success");
       onChanged();
     } catch (err) {
@@ -209,6 +207,21 @@ export function PatientPackageSection({
       );
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const handlePackageAttendance = async (pkg: SessionPackage, status: "came" | "no_show") => {
+    const token = getAccessToken();
+    if (!token) return;
+    const date = pkgAttendanceDates[pkg.id] || todayIso;
+    setPkgAttendanceBusy(pkg.id);
+    try {
+      await api.admin.markAttendance(token, patientId, status, date, pkg.id);
+      onChanged();
+    } catch (err) {
+      onMessage(err instanceof Error ? err.message : "İşaretlenemedi.", "error");
+    } finally {
+      setPkgAttendanceBusy(null);
     }
   };
 
@@ -390,6 +403,37 @@ export function PatientPackageSection({
                     style={{ width: `${pct}%` }}
                   />
                 </div>
+
+                {pkg.is_active && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/70 bg-slate-50/60 px-3 py-2.5 dark:border-slate-700/50 dark:bg-slate-800/40">
+                    <input
+                      type="date"
+                      value={pkgAttendanceDates[pkg.id] ?? todayIso}
+                      max={todayIso}
+                      onChange={(e) =>
+                        setPkgAttendanceDates((prev) => ({ ...prev, [pkg.id]: e.target.value }))
+                      }
+                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 outline-none focus:border-blue-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                    />
+                    <button
+                      type="button"
+                      disabled={pkgAttendanceBusy === pkg.id}
+                      onClick={() => handlePackageAttendance(pkg, "came")}
+                      className="rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
+                    >
+                      {pkgAttendanceBusy === pkg.id ? "…" : "✓ Geldi"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={pkgAttendanceBusy === pkg.id}
+                      onClick={() => handlePackageAttendance(pkg, "no_show")}
+                      className="rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
+                    >
+                      {pkgAttendanceBusy === pkg.id ? "…" : "✗ Gelmedi"}
+                    </button>
+                  </div>
+                )}
+
                 {pkg.note && (
                   <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                     {pkg.note}
@@ -437,21 +481,6 @@ export function PatientPackageSection({
                   })),
                 ]}
                 aria-label="Paket planı"
-              />
-            </FormGroup>
-
-            <FormGroup
-              label="Geçmişte Kullanılan Seans (eski öğrenci aktarımı)"
-              hint="Öğrenci daha önce bu paketten seans kullandıysa buraya girin. 0 bırakabilirsiniz."
-            >
-              <input
-                type="number"
-                min={0}
-                value={form.used_sessions}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, used_sessions: Math.max(0, Number(e.target.value)) }))
-                }
-                className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 dark:border-slate-600 dark:bg-slate-800/80 dark:text-slate-100"
               />
             </FormGroup>
 
