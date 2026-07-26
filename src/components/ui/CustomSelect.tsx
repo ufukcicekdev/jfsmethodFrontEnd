@@ -108,11 +108,15 @@ export function CustomSelect<T extends string | number>({
       if (event.key === "Escape") close();
     };
 
+    const handleScroll = () => close();
+
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
+    window.addEventListener("scroll", handleScroll, true);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("scroll", handleScroll, true);
     };
   }, [open, close]);
 
@@ -181,13 +185,14 @@ export function CustomSelect<T extends string | number>({
           if (disabled) return;
           if (!open && containerRef.current) {
             const rect = containerRef.current.getBoundingClientRect();
-            setDropdownStyle({
-              position: "fixed",
-              top: rect.bottom + 6,
-              left: rect.left,
-              width: rect.width,
-              zIndex: 9999,
-            });
+            const maxDropdownH = 240; // max-h-60
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const openUpward = spaceBelow < maxDropdownH && rect.top > spaceBelow;
+            setDropdownStyle(
+              openUpward
+                ? { position: "fixed", bottom: window.innerHeight - rect.top + 4, left: rect.left, width: rect.width, zIndex: 9999 }
+                : { position: "fixed", top: rect.bottom + 4, left: rect.left, width: rect.width, zIndex: 9999 }
+            );
           }
           setOpen((current) => !current);
         }}
