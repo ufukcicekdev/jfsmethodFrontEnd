@@ -68,8 +68,8 @@ function PkgDropdown({
       {open && rect && typeof document !== "undefined" && createPortal(
         <ul
           onMouseDown={(e) => e.stopPropagation()}
-          style={{ position: "fixed", top: rect.bottom + 4, left: rect.left, minWidth: rect.width, zIndex: 9999 }}
-          className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800"
+          style={{ position: "fixed", top: rect.bottom + 4, left: rect.left, minWidth: rect.width, zIndex: 9999, maxHeight: 200, overflowY: "auto" }}
+          className="rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800"
         >
           <li>
             <button type="button" onClick={(e) => { e.stopPropagation(); onChange(""); setOpen(false); }}
