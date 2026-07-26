@@ -33,16 +33,22 @@ function PkgDropdown({
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const selected = packages.find((p) => p.id === value);
 
   useEffect(() => {
     if (!open) return;
     const close = () => setOpen(false);
+    const onScroll = (e: Event) => {
+      // ignore scrolls that happen inside the dropdown list itself
+      if (listRef.current && listRef.current.contains(e.target as Node)) return;
+      close();
+    };
     document.addEventListener("mousedown", close);
-    window.addEventListener("scroll", close, true);
+    window.addEventListener("scroll", onScroll, true);
     return () => {
       document.removeEventListener("mousedown", close);
-      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("scroll", onScroll, true);
     };
   }, [open]);
 
@@ -67,6 +73,7 @@ function PkgDropdown({
       </button>
       {open && rect && typeof document !== "undefined" && createPortal(
         <ul
+          ref={listRef}
           onMouseDown={(e) => e.stopPropagation()}
           style={{ position: "fixed", top: rect.bottom + 4, left: rect.left, minWidth: rect.width, zIndex: 9999, maxHeight: 200, overflowY: "auto" }}
           className="rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800"
