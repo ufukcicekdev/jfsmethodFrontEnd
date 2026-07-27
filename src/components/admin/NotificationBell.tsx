@@ -218,7 +218,8 @@ export function NotificationBell() {
                 {notifications.map((notification) => {
                   const isPending =
                     notification.notification_type === "appointment_new" &&
-                    notification.appointment_id;
+                    notification.appointment_id &&
+                    notification.appointment_status === "pending";
                   const isActing = actionState?.id === notification.id;
 
                   return (

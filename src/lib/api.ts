@@ -706,6 +706,7 @@ export interface AdminNotification {
   link: string;
   actor_name: string | null;
   appointment_id: number | null;
+  appointment_status: string | null;
   is_read: boolean;
   created_at: string;
 }
