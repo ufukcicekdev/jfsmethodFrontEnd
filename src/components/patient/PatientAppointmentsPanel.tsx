@@ -213,7 +213,7 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
   return (
     <div className="space-y-4 sm:space-y-6">
       {!compact && (
-        <GlassCard className="p-4 sm:p-6">
+        <GlassCard className="relative z-10 p-4 sm:p-6">
           {activePackage === null && (
             <div className="mb-5 rounded-xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 dark:border-amber-800/50 dark:bg-amber-950/30">
               <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
