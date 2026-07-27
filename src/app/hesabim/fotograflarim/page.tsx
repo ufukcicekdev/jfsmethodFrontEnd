@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { PatientShell } from "@/components/patient/PatientShell";
 import { PatientProgressGallery } from "@/components/patient/PatientProgressGallery";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { api, type PatientProgressPhoto } from "@/lib/api";
@@ -97,8 +96,7 @@ export default function FotograflarimPage() {
   };
 
   return (
-    <PatientShell>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Upload form */}
         <GlassCard className="p-4 sm:p-6">
           <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-50">
@@ -245,7 +243,6 @@ export default function FotograflarimPage() {
         ) : (
           <PatientProgressGallery photos={photos} onDelete={handleDelete} />
         )}
-      </div>
-    </PatientShell>
+    </div>
   );
 }
