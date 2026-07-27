@@ -49,7 +49,6 @@ function formatDateTime(value: string) {
 export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
   const confirm = useConfirm();
   const { user } = useAuth();
-  const [token, setToken] = useState<string | null>(null);
   const [myAppointments, setMyAppointments] = useState<Appointment[]>([]);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
@@ -60,6 +59,9 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
   const [success, setSuccess] = useState(false);
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
+
+  // Her zaman localStorage'dan taze token — state gecikmesi yok
+  const token = getAccessToken();
 
   useEffect(() => {
     api.site
@@ -81,10 +83,6 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
   } = useKvkkConsent();
 
   useEffect(() => {
-    setToken(getAccessToken());
-  }, [user]);
-
-  useEffect(() => {
     if (!token) return;
     api.packages
       .me(token)
@@ -97,7 +95,7 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
         setActivePackage(active ?? null);
       })
       .catch(() => setActivePackage(null));
-  }, [token]);
+  }, [user]);
 
   useEffect(() => {
     if (!token) return;
@@ -105,21 +103,23 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
       .availableSlots(token, date)
       .then(setSlots)
       .catch(() => setSlots([]));
-  }, [token, date]);
+  }, [user, date]);
 
   const loadMyAppointments = () => {
-    if (!token) return;
+    const t = getAccessToken();
+    if (!t) return;
     api.appointments
-      .list(token)
+      .list(t)
       .then(setMyAppointments)
       .catch(() => setMyAppointments([]));
   };
 
   useEffect(() => {
     loadMyAppointments();
-  }, [token]);
+  }, [user]);
 
   const handleCancel = async (id: number, appointment: Appointment) => {
+    const token = getAccessToken();
     if (!token) return;
     const warning = getCancelWarning(appointment);
     const ok = await confirm({
@@ -145,6 +145,7 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
 
   const handleBook = async (e: React.FormEvent) => {
     e.preventDefault();
+    const token = getAccessToken();
     if (!token || !selectedSlot || !isValid) return;
 
     setLoading(true);
