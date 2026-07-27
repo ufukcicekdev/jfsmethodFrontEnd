@@ -5,7 +5,8 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { PatientShell } from "@/components/patient/PatientShell";
 import { PatientProgressGallery } from "@/components/patient/PatientProgressGallery";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { api, getAccessToken, type PatientProgressPhoto } from "@/lib/api";
+import { api, type PatientProgressPhoto } from "@/lib/api";
+import { getAccessToken } from "@/lib/auth";
 
 const CATEGORY_OPTIONS = [
   { value: "posture_front", label: "Ön Görünüm" },

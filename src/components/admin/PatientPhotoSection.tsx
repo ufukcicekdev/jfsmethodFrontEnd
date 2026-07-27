@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { FormField, FormGroup, FormInput } from "@/components/ui/FormField";
+import { FormField, FormGroup } from "@/components/ui/FormField";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { ImageCompareSlider } from "@/components/ui/ImageCompareSlider";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
@@ -58,6 +58,9 @@ export function PatientPhotoSection({
     taken_at: new Date().toISOString().split("T")[0],
     file: null as File | null,
   });
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const filteredPhotos = useMemo(() => {
     if (categoryFilter === "all") return photos;
@@ -116,6 +119,9 @@ export function PatientPhotoSection({
         taken_at: new Date().toISOString().split("T")[0],
         file: null,
       });
+      setFilePreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
       onMessage("Fotoğraf yüklendi.", "success");
     } catch (err) {
       onMessage(
@@ -234,18 +240,71 @@ export function PatientPhotoSection({
             />
           </div>
 
-          <FormGroup label="Fotoğraf" required hint="JPG, PNG veya WebP — en fazla 5 MB">
-            <FormInput
+          <div>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Fotoğraf <span className="text-blue-500">*</span>
+              <span className="ml-2 font-normal normal-case text-slate-400">JPG, PNG veya WebP — en fazla 5 MB</span>
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="flex flex-1 flex-col items-center gap-2 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 py-3 text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-700/50 dark:bg-blue-950/20 dark:text-blue-300"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                </svg>
+                <span className="text-xs font-semibold">Kamera</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex flex-1 flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 py-3 text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800/40 dark:text-slate-300"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 21h18M3 3h18" />
+                </svg>
+                <span className="text-xs font-semibold">Galeri</span>
+              </button>
+            </div>
+            <input
+              ref={cameraInputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              onChange={(e) =>
-                setUploadForm((f) => ({
-                  ...f,
-                  file: e.target.files?.[0] ?? null,
-                }))
-              }
+              capture="environment"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                setUploadForm((prev) => ({ ...prev, file: f }));
+                setFilePreview(f ? URL.createObjectURL(f) : null);
+              }}
             />
-          </FormGroup>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                setUploadForm((prev) => ({ ...prev, file: f }));
+                setFilePreview(f ? URL.createObjectURL(f) : null);
+              }}
+            />
+            {filePreview && (
+              <div className="relative mt-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={filePreview} alt="Önizleme" className="max-h-48 w-full rounded-xl object-contain" />
+                <button
+                  type="button"
+                  onClick={() => { setUploadForm((f) => ({ ...f, file: null })); setFilePreview(null); }}
+                  className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-xs text-white"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+          </div>
 
           <button
             type="submit"
