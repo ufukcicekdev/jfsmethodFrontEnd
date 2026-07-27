@@ -117,6 +117,7 @@ export function CustomDatePicker({
   const fieldId = id ?? name ?? generatedId;
   const popoverId = `${fieldId}-calendar`;
   const containerRef = useRef<HTMLDivElement>(null);
+  const justSelectedRef = useRef(false);
   const [open, setOpen] = useState(false);
 
   const selected = parseISODate(value);
@@ -205,6 +206,7 @@ export function CustomDatePicker({
 
   const selectDate = (date: Date) => {
     if (isDisabledDate(date)) return;
+    justSelectedRef.current = true;
     onChange(toISODate(date));
     close();
   };
@@ -235,7 +237,10 @@ export function CustomDatePicker({
         aria-expanded={open}
         aria-controls={popoverId}
         disabled={disabled}
-        onClick={() => !disabled && setOpen((current) => !current)}
+        onClick={() => {
+          if (justSelectedRef.current) { justSelectedRef.current = false; return; }
+          if (!disabled) setOpen((current) => !current);
+        }}
         onKeyDown={handleKeyDown}
         className={`${triggerClassName} ${open ? "border-blue-400 ring-2 ring-blue-400/25 dark:border-blue-400" : ""}`}
       >
