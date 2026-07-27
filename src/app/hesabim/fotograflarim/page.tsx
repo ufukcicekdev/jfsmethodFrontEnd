@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { PatientProgressGallery } from "@/components/patient/PatientProgressGallery";
 import { PHOTO_CATEGORIES } from "@/components/admin/PatientPhotoSection";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -11,6 +12,7 @@ import { getAccessToken } from "@/lib/auth";
 
 export default function FotograflarimPage() {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [photos, setPhotos] = useState<PatientProgressPhoto[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -80,6 +82,13 @@ export default function FotograflarimPage() {
   };
 
   const handleDelete = async (id: number) => {
+    const ok = await confirm({
+      title: "Fotoğrafı sil",
+      message: "Bu fotoğrafı silmek istediğinize emin misiniz?",
+      confirmLabel: "Sil",
+      variant: "danger",
+    });
+    if (!ok) return;
     const token = getAccessToken();
     if (!token) return;
     try {
