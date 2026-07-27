@@ -1794,6 +1794,11 @@ export const api = {
       fetch(`${API_BASE}/admin/patients/report/?report_format=${format}`, {
         headers: { Authorization: `Bearer ${token}` },
       }),
+    impersonate: (token: string, patientId: number) =>
+      apiFetch<{ access: string; refresh: string }>(`/admin/patients/${patientId}/impersonate/`, {
+        token,
+        method: "POST",
+      }),
   },
   myDiets: {
     list: (token: string) => apiFetch<DietPlan[]>("/my-diets/", { token }),

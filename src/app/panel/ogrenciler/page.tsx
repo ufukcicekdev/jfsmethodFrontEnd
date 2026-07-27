@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { FormInput } from "@/components/ui/FormField";
 import { AdminCreatePatientForm } from "@/components/admin/AdminCreatePatientForm";
-import { getAccessToken } from "@/lib/auth";
+import { getAccessToken, setTokens } from "@/lib/auth";
 import { api, type AdminPatient } from "@/lib/api";
 import { getBMICategory } from "@/lib/bmi";
 
@@ -323,11 +323,32 @@ export default function StudentsPage() {
               <GlassCard key={patient.id} className="overflow-hidden transition-shadow hover:shadow-md">
                 <Link href={`/panel/ogrenciler/${patient.id}`} className="block p-4 sm:p-5">
                   <div className="flex flex-col gap-4">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-slate-900 dark:text-slate-100">{patient.full_name}</p>
-                      <p className="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-400">
-                        @{patient.username} · {patient.email}
-                      </p>
+                    <div className="flex items-start justify-between gap-3 min-w-0">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-900 dark:text-slate-100">{patient.full_name}</p>
+                        <p className="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-400">
+                          @{patient.username} · {patient.email}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const token = getAccessToken();
+                          if (!token) return;
+                          try {
+                            const data = await api.admin.impersonate(token, patient.id);
+                            setTokens(data.access, data.refresh);
+                            window.open("/hesabim", "_blank");
+                          } catch {
+                            alert("Giriş yapılamadı.");
+                          }
+                        }}
+                        className="shrink-0 rounded-full border border-violet-400/60 px-3 py-1 text-xs font-semibold text-violet-700 hover:bg-violet-50 dark:text-violet-300 dark:border-violet-500/40 dark:hover:bg-violet-950/30"
+                      >
+                        Olarak Giriş Yap
+                      </button>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4 sm:gap-4">
