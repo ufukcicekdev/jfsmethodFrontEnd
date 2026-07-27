@@ -629,6 +629,18 @@ export interface BlogTopic {
   created_at: string;
 }
 
+export interface AuditLog {
+  id: number;
+  action: string;
+  action_display: string;
+  status: "success" | "failure" | "error";
+  actor: { id: number; username: string; full_name: string } | null;
+  target_user: { id: number; username: string; full_name: string } | null;
+  detail: Record<string, unknown>;
+  ip_address: string | null;
+  created_at: string;
+}
+
 export interface BlogPost {
   id: number;
   title: string;
@@ -1799,6 +1811,13 @@ export const api = {
         token,
         method: "POST",
       }),
+    auditLogs: (token: string, params?: { action?: string; status?: string; search?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.action) q.set("action", params.action);
+      if (params?.status) q.set("status", params.status);
+      if (params?.search) q.set("search", params.search);
+      return apiFetch<AuditLog[]>(`/admin/audit-logs/?${q.toString()}`, { token });
+    },
   },
   myDiets: {
     list: (token: string) => apiFetch<DietPlan[]>("/my-diets/", { token }),
