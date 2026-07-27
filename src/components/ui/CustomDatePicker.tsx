@@ -135,7 +135,7 @@ export function CustomDatePicker({
   useEffect(() => {
     if (!open) return;
 
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: Event) => {
       if (
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
@@ -148,10 +148,10 @@ export function CustomDatePicker({
       if (event.key === "Escape") close();
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("pointerdown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("pointerdown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
   }, [open, close]);
@@ -301,6 +301,7 @@ export function CustomDatePicker({
                   key={`${toISODate(date)}-${index}`}
                   type="button"
                   disabled={disabledDay}
+                  onPointerDown={(e) => { e.stopPropagation(); if (!disabledDay) selectDate(date); }}
                   onClick={() => selectDate(date)}
                   className={`flex h-9 w-full items-center justify-center rounded-lg text-sm transition-colors ${
                     !inMonth
