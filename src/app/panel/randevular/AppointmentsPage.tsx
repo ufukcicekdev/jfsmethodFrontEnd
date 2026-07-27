@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { FormField } from "@/components/ui/FormField";
@@ -52,6 +51,7 @@ function formatDateTime(value: string) {
 }
 
 export default function AppointmentsPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const statusFilter = searchParams.get("status") ?? "";
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -180,29 +180,31 @@ export default function AppointmentsPage() {
 
       <div className="overflow-x-auto pb-1">
         <div className="flex w-max min-w-full gap-2 sm:flex-wrap sm:w-auto">
-        <Link
-          href="/panel/randevular"
-          className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium ${
-            !statusFilter
-              ? "bg-blue-500 text-white"
-              : "border border-slate-300/60 text-slate-700 dark:border-slate-600/60 dark:text-slate-200"
-          }`}
-        >
-          Tümü
-        </Link>
-        {STATUS_OPTIONS.map((status) => (
-          <Link
-            key={status}
-            href={`/panel/randevular?status=${status}`}
+          <button
+            type="button"
+            onClick={() => router.push("/panel/randevular")}
             className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium ${
-              statusFilter === status
+              !statusFilter
                 ? "bg-blue-500 text-white"
                 : "border border-slate-300/60 text-slate-700 dark:border-slate-600/60 dark:text-slate-200"
             }`}
           >
-            {STATUS_LABELS[status]}
-          </Link>
-        ))}
+            Tümü
+          </button>
+          {STATUS_OPTIONS.map((status) => (
+            <button
+              key={status}
+              type="button"
+              onClick={() => router.push(`/panel/randevular?status=${status}`)}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium ${
+                statusFilter === status
+                  ? "bg-blue-500 text-white"
+                  : "border border-slate-300/60 text-slate-700 dark:border-slate-600/60 dark:text-slate-200"
+              }`}
+            >
+              {STATUS_LABELS[status]}
+            </button>
+          ))}
         </div>
       </div>
 
