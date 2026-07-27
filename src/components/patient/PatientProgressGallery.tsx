@@ -24,8 +24,10 @@ function formatDate(value: string | null) {
 
 export function PatientProgressGallery({
   photos,
+  onDelete,
 }: {
   photos: PatientProgressPhoto[];
+  onDelete?: (id: number) => void;
 }) {
   const [preview, setPreview] = useState<PatientProgressPhoto | null>(null);
   const [compareMode, setCompareMode] = useState(false);
@@ -78,7 +80,7 @@ export function PatientProgressGallery({
               İlerleme Fotoğrafları
             </h2>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-              Terapistinizin yüklediği postür ve ilerleme kayıtları.
+              Postür ve ilerleme fotoğraflarınız.
             </p>
           </div>
           {allPosturePhotos.length >= 2 && (
@@ -136,7 +138,7 @@ export function PatientProgressGallery({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 21h18M3 3h18" />
             </svg>
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Henüz fotoğraf yüklenmemiş.</p>
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Seans sonrası terapistiniz ekleyecektir.</p>
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Yukarıdaki formu kullanarak fotoğraf ekleyebilirsiniz.</p>
           </div>
         ) : (
           <>
@@ -172,41 +174,52 @@ export function PatientProgressGallery({
                 {visiblePhotos.map((photo) => {
                   const isSelected = selectedIds.includes(photo.id);
                   return (
-                    <button
-                      key={photo.id}
-                      type="button"
-                      onClick={() => {
-                        if (compareMode) toggleSelect(photo.id);
-                        else setPreview(photo);
-                      }}
-                      className={`overflow-hidden rounded-xl border text-left transition-all ${
-                        isSelected
-                          ? "border-blue-500 ring-2 ring-blue-400/30"
-                          : "border-slate-200/80 dark:border-slate-600/50"
-                      }`}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={photo.image_url}
-                        alt={photo.title || photo.category_label}
-                        className="aspect-3/4 w-full object-cover"
-                      />
-                      <div className="p-2">
-                        <p className="text-xs font-medium text-slate-800 dark:text-slate-100">
-                          {photo.category_label}
-                        </p>
-                        <p className="text-[10px] text-slate-500">{formatDate(photo.taken_at)}</p>
-                        {compareMode && (
-                          <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                            isSelected
-                              ? "bg-blue-500 text-white"
-                              : "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-                          }`}>
-                            {isSelected ? `${selectedIds.indexOf(photo.id) + 1}. Seçili` : "Seç"}
-                          </span>
-                        )}
-                      </div>
-                    </button>
+                    <div key={photo.id} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (compareMode) toggleSelect(photo.id);
+                          else setPreview(photo);
+                        }}
+                        className={`w-full overflow-hidden rounded-xl border text-left transition-all ${
+                          isSelected
+                            ? "border-blue-500 ring-2 ring-blue-400/30"
+                            : "border-slate-200/80 dark:border-slate-600/50"
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={photo.image_url}
+                          alt={photo.title || photo.category_label}
+                          className="aspect-3/4 w-full object-cover"
+                        />
+                        <div className="p-2">
+                          <p className="text-xs font-medium text-slate-800 dark:text-slate-100">
+                            {photo.category_label}
+                          </p>
+                          <p className="text-[10px] text-slate-500">{formatDate(photo.taken_at)}</p>
+                          {compareMode && (
+                            <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              isSelected
+                                ? "bg-blue-500 text-white"
+                                : "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                            }`}>
+                              {isSelected ? `${selectedIds.indexOf(photo.id) + 1}. Seçili` : "Seç"}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                      {onDelete && !compareMode && (
+                        <button
+                          type="button"
+                          onClick={() => onDelete!(photo.id)}
+                          className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-red-500/80 text-white text-[10px] backdrop-blur-sm hover:bg-red-600"
+                          aria-label="Fotoğrafı sil"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
                   );
                 })}
               </div>

@@ -1017,6 +1017,22 @@ export const api = {
     progressPhotos: (token: string) =>
       apiFetch<PatientProgressPhoto[]>("/wellness/progress-photos/", { token }),
 
+    uploadProgressPhoto: (
+      token: string,
+      data: { image: File; category: string; title?: string; note?: string; taken_at?: string }
+    ) => {
+      const fd = new FormData();
+      fd.append("image", data.image);
+      fd.append("category", data.category);
+      if (data.title) fd.append("title", data.title);
+      if (data.note) fd.append("note", data.note);
+      if (data.taken_at) fd.append("taken_at", data.taken_at);
+      return apiUpload<PatientProgressPhoto>("/wellness/progress-photos/", fd, token);
+    },
+
+    deleteProgressPhoto: (token: string, id: number) =>
+      apiFetch<void>(`/wellness/progress-photos/${id}/`, { token, method: "DELETE" }),
+
     water: {
       get: (token: string) =>
         apiFetch<{ date: string; ml_consumed: number }>("/wellness/water/", { token }),
