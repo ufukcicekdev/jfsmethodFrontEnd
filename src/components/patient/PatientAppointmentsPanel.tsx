@@ -289,9 +289,6 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
                           }`}
                         >
                           {time}
-                          <span className="mt-0.5 block text-[10px] text-slate-500 dark:text-slate-400">
-                            {slot.doctor_name}
-                          </span>
                         </button>
                       );
                     })}
