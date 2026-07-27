@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BodyPainMap } from "@/components/patient/BodyPainMap";
 import { HomeExerciseList } from "@/components/patient/HomeExerciseList";
-import { PatientProgressGallery } from "@/components/patient/PatientProgressGallery";
 import { WellnessStatsStrip } from "@/components/patient/WellnessStatsStrip";
 import { WeightChart } from "@/components/admin/WeightChart";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -128,7 +127,7 @@ export default function PatientDigitalTwinPage() {
           Tedavi İkizin
         </h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-          Ağrı haritası, ev programınız, kilo trendi ve ilerleme fotoğrafları —
+          Ağrı haritası, ev programınız ve kilo trendi —
           tedavi yolculuğunuz tek ekranda.
         </p>
       </div>
@@ -188,7 +187,6 @@ export default function PatientDigitalTwinPage() {
         </GlassCard>
       )}
 
-      <PatientProgressGallery photos={data.progress_photos} />
     </div>
   );
 }
