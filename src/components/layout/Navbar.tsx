@@ -111,7 +111,7 @@ export function Navbar() {
                 Giriş Yap
               </Link>
               <Link
-                href="/kayit"
+                href="/#kayit"
                 className="hidden rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-600/25 transition-all hover:bg-emerald-700 sm:inline-block"
               >
                 Kayıt Ol
@@ -202,7 +202,7 @@ export function Navbar() {
                     Giriş Yap
                   </Link>
                   <Link
-                    href="/kayit"
+                    href="/#kayit"
                     className="block rounded-full bg-emerald-600 px-5 py-2.5 text-center text-sm font-semibold text-white"
                     onClick={() => setMenuOpen(false)}
                   >
