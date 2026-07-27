@@ -12,7 +12,7 @@ import { isStaffUser } from "@/lib/auth";
 
 const NAV_ITEMS = [
   { href: "/hesabim", label: "Genel Bakış", exact: true },
-  { href: "/hesabim/paketler", label: "Paketlerim", exact: false },
+  { href: "/hesabim/paketler", label: "Paket / Randevu", exact: false },
   { href: "/hesabim/profil", label: "Profil & Kilo", exact: false },
   { href: "/hesabim/diyet", label: "Diyet Planım", exact: false },
   { href: "/hesabim/egzersizlerim", label: "Egzersizlerim", exact: false },

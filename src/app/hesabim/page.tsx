@@ -227,17 +227,25 @@ export default function PatientDashboardPage() {
                   `${activePackage.total_sessions} seanslık paket`}
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                {activePackage.remaining_sessions}
-                <span className="text-base font-medium text-slate-400">
-                  {" "}
-                  / {activePackage.total_sessions}
-                </span>
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                kalan seans
-              </p>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                  {activePackage.remaining_sessions}
+                  <span className="text-base font-medium text-slate-400">
+                    {" "}
+                    / {activePackage.total_sessions}
+                  </span>
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  kalan seans
+                </p>
+              </div>
+              <Link
+                href="/hesabim/randevular"
+                className="rounded-full bg-blue-500 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600"
+              >
+                Randevu Al
+              </Link>
             </div>
           </div>
           <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
