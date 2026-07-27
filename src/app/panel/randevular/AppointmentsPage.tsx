@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { FormField } from "@/components/ui/FormField";
@@ -52,7 +52,6 @@ function formatDateTime(value: string) {
 }
 
 export default function AppointmentsPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const statusFilter = searchParams.get("status") ?? "";
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -181,9 +180,9 @@ export default function AppointmentsPage() {
 
       <div className="overflow-x-auto pb-1">
         <div className="flex w-max min-w-full gap-2 sm:flex-wrap sm:w-auto">
-          <button
-            type="button"
-            onClick={() => router.push("/panel/randevular")}
+          <Link
+            href="/panel/randevular"
+            scroll={false}
             className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium ${
               !statusFilter
                 ? "bg-blue-500 text-white"
@@ -191,12 +190,12 @@ export default function AppointmentsPage() {
             }`}
           >
             Tümü
-          </button>
+          </Link>
           {STATUS_OPTIONS.map((status) => (
-            <button
+            <Link
               key={status}
-              type="button"
-              onClick={() => router.push(`/panel/randevular?status=${status}`)}
+              href={`/panel/randevular?status=${status}`}
+              scroll={false}
               className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium ${
                 statusFilter === status
                   ? "bg-blue-500 text-white"
@@ -204,7 +203,7 @@ export default function AppointmentsPage() {
               }`}
             >
               {STATUS_LABELS[status]}
-            </button>
+            </Link>
           ))}
         </div>
       </div>
