@@ -178,7 +178,7 @@ export default function AppointmentsPage() {
         </p>
       )}
 
-      <div className="-mx-1 overflow-x-auto px-1 pb-1">
+      <div className="overflow-x-auto pb-1">
         <div className="flex w-max min-w-full gap-2 sm:flex-wrap sm:w-auto">
         <Link
           href="/panel/randevular"
