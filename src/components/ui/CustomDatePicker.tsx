@@ -119,6 +119,7 @@ export function CustomDatePicker({
   const containerRef = useRef<HTMLDivElement>(null);
   const justSelectedRef = useRef(false);
   const [open, setOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
 
   const selected = parseISODate(value);
   const minDate = min ? parseISODate(min) : null;
@@ -134,6 +135,12 @@ export function CustomDatePicker({
 
   useEffect(() => {
     if (!open) return;
+
+    // Aşağıda 400px alan yoksa yukarı aç
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropUp(window.innerHeight - rect.bottom < 400);
+    }
 
     const handleClickOutside = (event: Event) => {
       if (
@@ -255,7 +262,7 @@ export function CustomDatePicker({
           id={popoverId}
           role="dialog"
           aria-label="Takvim"
-          className="absolute left-0 z-50 mt-2 w-[min(100vw-2rem,320px)] rounded-2xl border border-white/30 bg-white/95 p-4 shadow-xl shadow-slate-300/30 backdrop-blur-xl dark:border-slate-600/50 dark:bg-slate-900/95 dark:shadow-black/40"
+          className={`absolute left-0 z-50 w-[min(100vw-2rem,320px)] rounded-2xl border border-white/30 bg-white/95 p-4 shadow-xl shadow-slate-300/30 backdrop-blur-xl dark:border-slate-600/50 dark:bg-slate-900/95 dark:shadow-black/40 ${dropUp ? "bottom-full mb-2" : "mt-2"}`}
         >
           <div className="mb-3 flex items-center justify-between gap-2">
             <button
