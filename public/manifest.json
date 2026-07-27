@@ -33,19 +33,5 @@
       "purpose": "maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/screenshot-wide.png",
-      "sizes": "1536x1024",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "JFS Method masaüstü panel görünümü"
-    },
-    {
-      "src": "/screenshot-mobile.png",
-      "sizes": "1536x1024",
-      "type": "image/png",
-      "label": "JFS Method mobil uygulama görünümü"
-    }
-  ]
+  "screenshots": []
 }
