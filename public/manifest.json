@@ -33,5 +33,13 @@
       "purpose": "maskable"
     }
   ],
-  "screenshots": []
+  "screenshots": [
+    {
+      "src": "/screenshot-wide.png",
+      "sizes": "1370x744",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "JFS Method ana sayfa"
+    }
+  ]
 }
