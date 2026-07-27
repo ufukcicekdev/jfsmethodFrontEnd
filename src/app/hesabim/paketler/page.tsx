@@ -72,21 +72,13 @@ export default function PatientPackagesPage() {
 
       {active ? (
         <GlassCard className="p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                Aktif Paket
-              </p>
-              <h2 className="mt-0.5 truncate text-base font-bold text-slate-900 dark:text-slate-50">
-                {active.name || active.plan_name || `${active.total_sessions} seanslık paket`}
-              </h2>
-            </div>
-            <a
-              href="#randevularim"
-              className="shrink-0 rounded-full bg-blue-500 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600"
-            >
-              Randevu Al
-            </a>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+              Aktif Paket
+            </p>
+            <h2 className="mt-0.5 text-base font-bold text-slate-900 dark:text-slate-50">
+              {active.name || active.plan_name || `${active.total_sessions} seanslık paket`}
+            </h2>
           </div>
           <div className="mt-3 flex items-center gap-4">
             <div>
