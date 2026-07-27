@@ -164,7 +164,7 @@ export default function PatientPackagesPage() {
               <thead>
                 <tr className="border-b border-slate-200/80 text-xs uppercase tracking-wider text-slate-500 dark:border-slate-600/50">
                   <th className="px-4 py-3">Paket</th>
-                  <th className="px-4 py-3">Seans</th>
+                  <th className="px-4 py-3">Kalan / Toplam</th>
                   <th className="px-4 py-3">Durum</th>
                   <th className="px-4 py-3">Ödeme</th>
                   <th className="px-4 py-3">Tarih</th>
@@ -180,7 +180,8 @@ export default function PatientPackagesPage() {
                       {pkg.name || pkg.plan_name || "Paket"}
                     </td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                      {pkg.remaining_sessions}/{pkg.total_sessions}
+                      <span className="font-semibold text-slate-900 dark:text-slate-100">{pkg.remaining_sessions}</span>
+                      <span className="text-slate-400"> / {pkg.total_sessions}</span>
                     </td>
                     <td className="px-4 py-3">
                       <span
