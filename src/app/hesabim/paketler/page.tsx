@@ -71,52 +71,53 @@ export default function PatientPackagesPage() {
       </div>
 
       {active ? (
-        <GlassCard className="p-5 sm:p-6">
-          <p className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-            Aktif Paket
-          </p>
-          <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-50">
-            {active.name || active.plan_name || `${active.total_sessions} seanslık paket`}
-          </h2>
-          <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-                {active.remaining_sessions}
-                <span className="text-lg font-medium text-slate-400">
-                  {" "}
-                  / {active.total_sessions}
-                </span>
+        <GlassCard className="p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                Aktif Paket
               </p>
-              <p className="text-sm text-slate-500">kalan seans</p>
+              <h2 className="mt-0.5 truncate text-base font-bold text-slate-900 dark:text-slate-50">
+                {active.name || active.plan_name || `${active.total_sessions} seanslık paket`}
+              </h2>
             </div>
-            <div className="text-right text-sm text-slate-600 dark:text-slate-300">
-              <p>Kullanılan: {active.used_sessions}</p>
-              <p>Gelmedi: {active.no_show_count}</p>
-              <p>Planlı: {active.scheduled_count}</p>
+            <a
+              href="#randevularim"
+              className="shrink-0 rounded-full bg-blue-500 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600"
+            >
+              Randevu Al
+            </a>
+          </div>
+          <div className="mt-3 flex items-center gap-4">
+            <div>
+              <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">{active.remaining_sessions}</span>
+              <span className="text-sm font-medium text-slate-400"> / {active.total_sessions}</span>
+              <p className="text-xs text-slate-500">kalan seans</p>
+            </div>
+            <div className="flex-1">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                <div
+                  className="h-full rounded-full bg-blue-500 transition-all"
+                  style={{
+                    width: `${active.total_sessions > 0 ? Math.round((active.used_sessions / active.total_sessions) * 100) : 0}%`,
+                  }}
+                />
+              </div>
+              <div className="mt-1.5 flex gap-3 text-xs text-slate-500">
+                <span>Kullanılan: {active.used_sessions}</span>
+                <span>Planlı: {active.scheduled_count}</span>
+                <span>Gelmedi: {active.no_show_count}</span>
+              </div>
             </div>
           </div>
-          <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-            <div
-              className="h-full rounded-full bg-blue-500 transition-all"
-              style={{
-                width: `${
-                  active.total_sessions > 0
-                    ? Math.round(
-                        (active.used_sessions / active.total_sessions) * 100
-                      )
-                    : 0
-                }%`,
-              }}
-            />
-          </div>
-          <div className="mt-4 flex flex-wrap gap-3 text-sm">
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
             {formatPrice(active.price) && (
-              <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
                 {formatPrice(active.price)}
               </span>
             )}
             <span
-              className={`rounded-full px-3 py-1 ${
+              className={`rounded-full px-2.5 py-1 ${
                 active.is_paid
                   ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
                   : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
@@ -124,16 +125,8 @@ export default function PatientPackagesPage() {
             >
               {active.is_paid ? "Ödendi" : "Ödeme bekleniyor"}
             </span>
-            <span className="text-slate-500">
-              Satın alma: {formatDate(active.purchased_at)}
-            </span>
+            <span className="text-slate-500">Satın alma: {formatDate(active.purchased_at)}</span>
           </div>
-          <a
-            href="#randevularim"
-            className="mt-5 inline-block rounded-full bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-600"
-          >
-            Randevu Al
-          </a>
         </GlassCard>
       ) : (
         <GlassCard className="p-8 text-center">
