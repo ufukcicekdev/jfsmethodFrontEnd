@@ -39,8 +39,7 @@ export function PatientProgressGallery({
     return photos.filter((p) => p.category === activeFilter);
   }, [photos, activeFilter]);
 
-  const posturePhotos = filteredPhotos.filter((p) => p.category.startsWith("posture_"));
-  const visiblePhotos = compareMode ? posturePhotos : filteredPhotos;
+  const visiblePhotos = filteredPhotos;
 
   const comparePhotos = useMemo(
     () =>
@@ -68,8 +67,6 @@ export function PatientProgressGallery({
     });
   };
 
-  const allPosturePhotos = photos.filter((p) => p.category.startsWith("posture_"));
-
   return (
     <>
       <GlassCard className="p-4 sm:p-6">
@@ -83,7 +80,7 @@ export function PatientProgressGallery({
               Postür ve ilerleme fotoğraflarınız.
             </p>
           </div>
-          {allPosturePhotos.length >= 2 && (
+          {photos.length >= 2 && (
             <button
               type="button"
               onClick={() => {
