@@ -77,13 +77,13 @@ function ExerciseDetailModal({
               <p className="mb-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
                 Egzersiz öncesi ağrı: <span className="text-slate-800 dark:text-slate-200">{painBefore}/10</span>
               </p>
-              <NeonSlider label="Ağrı" unit="/10" min={0} max={10} value={painBefore} onChange={setPainBefore} />
+              <NeonSlider label="Ağrı" unit="/10" min={0} max={10} value={painBefore} onChange={setPainBefore} orientation="horizontal" />
             </div>
             <div>
               <p className="mb-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
                 Egzersiz sonrası ağrı: <span className="text-slate-800 dark:text-slate-200">{painAfter}/10</span>
               </p>
-              <NeonSlider label="Ağrı" unit="/10" min={0} max={10} value={painAfter} onChange={setPainAfter} />
+              <NeonSlider label="Ağrı" unit="/10" min={0} max={10} value={painAfter} onChange={setPainAfter} orientation="horizontal" />
             </div>
             <button
               type="button"
