@@ -3,16 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { PatientProgressGallery } from "@/components/patient/PatientProgressGallery";
+import { PHOTO_CATEGORIES } from "@/components/admin/PatientPhotoSection";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 import { api, type PatientProgressPhoto } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
-
-const CATEGORY_OPTIONS = [
-  { value: "posture_front", label: "Ön Görünüm" },
-  { value: "posture_side", label: "Yan Görünüm" },
-  { value: "posture_back", label: "Arka Görünüm" },
-  { value: "exercise", label: "Egzersiz" },
-];
 
 export default function FotograflarimPage() {
   const { user } = useAuth();
@@ -169,15 +164,12 @@ export default function FotograflarimPage() {
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Kategori
               </label>
-              <select
+              <CustomSelect
                 value={form.category}
-                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200/90 bg-white/80 px-4 py-2.5 text-sm text-slate-800 outline-none dark:border-slate-600/60 dark:bg-slate-800/80 dark:text-slate-100"
-              >
-                {CATEGORY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+                onChange={(val) => setForm((f) => ({ ...f, category: val }))}
+                options={PHOTO_CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
+                aria-label="Fotoğraf kategorisi"
+              />
             </div>
 
             {/* Title */}
