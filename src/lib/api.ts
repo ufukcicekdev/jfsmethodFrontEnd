@@ -923,7 +923,7 @@ export const api = {
     availableSlots: (token: string, date?: string) => {
       const params = date ? `?date=${date}` : "";
       return apiFetch<AvailableSlot[]>(
-        `/appointments/available-slots${params}`,
+        `/appointments/available-slots/${params}`,
         { token }
       );
     },
