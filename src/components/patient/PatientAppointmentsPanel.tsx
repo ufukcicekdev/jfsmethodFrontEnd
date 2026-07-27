@@ -341,7 +341,7 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
             alabilirsiniz.
           </p>
           <Link
-            href="/hesabim/randevular"
+            href="/hesabim/paketler"
             className="mt-3 inline-block text-sm font-medium text-amber-800 underline dark:text-amber-300"
           >
             Randevu sayfasına git →
@@ -362,7 +362,7 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
             </p>
             {compact && (
               <Link
-                href="/hesabim/randevular"
+                href="/hesabim/paketler"
                 className="mt-2 inline-block font-medium text-blue-600 hover:underline dark:text-blue-400"
               >
                 Randevu al →

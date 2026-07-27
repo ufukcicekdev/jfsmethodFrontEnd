@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { getAccessToken } from "@/lib/auth";
 import { api, type SessionPackage } from "@/lib/api";
+import { PatientAppointmentsPanel } from "@/components/patient/PatientAppointmentsPanel";
 
 function formatPrice(value: string | number | null) {
   if (value === null || value === "") return null;
@@ -62,10 +63,10 @@ export default function PatientPackagesPage() {
     <div className="space-y-4 sm:space-y-6">
       <div>
         <h1 className="text-xl font-bold text-slate-900 sm:text-2xl dark:text-slate-50">
-          Seans Paketlerim
+          Paket &amp; Randevu
         </h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-          Kalan seanslarınız, kullanım geçmişi ve ödeme durumu.
+          Seans paketleriniz, randevularınız ve ödeme durumu.
         </p>
       </div>
 
@@ -127,12 +128,12 @@ export default function PatientPackagesPage() {
               Satın alma: {formatDate(active.purchased_at)}
             </span>
           </div>
-          <Link
-            href="/hesabim/randevular"
+          <a
+            href="#randevularim"
             className="mt-5 inline-block rounded-full bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-600"
           >
             Randevu Al
-          </Link>
+          </a>
         </GlassCard>
       ) : (
         <GlassCard className="p-8 text-center">
@@ -239,6 +240,12 @@ export default function PatientPackagesPage() {
           </ul>
         </GlassCard>
       )}
+
+      {/* Randevular */}
+      <div id="randevularim">
+        <h2 className="mb-3 text-lg font-bold text-slate-900 dark:text-slate-50">Randevularım</h2>
+        <PatientAppointmentsPanel />
+      </div>
     </div>
   );
 }

@@ -82,7 +82,7 @@ export function AppointmentSection() {
           yönetmek için hesabınıza gidin.
         </p>
         <Link
-          href="/hesabim/randevular"
+          href="/hesabim/paketler"
           className="mt-6 inline-block rounded-full bg-blue-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-600"
         >
           Hesabıma Git
