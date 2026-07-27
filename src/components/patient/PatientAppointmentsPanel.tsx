@@ -30,13 +30,20 @@ const STATUS_LABELS: Record<Appointment["status"], string> = {
 };
 
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("tr-TR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  // iOS Safari güvenli parse (boşluk → T)
+  const dt = new Date(value.replace(" ", "T"));
+  try {
+    return dt.toLocaleString("tr-TR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${pad(dt.getDate())}.${pad(dt.getMonth() + 1)}.${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  }
 }
 
 export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
@@ -267,12 +274,12 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
                     Bu tarih için müsait randevu bulunmuyor.
                   </p>
                 ) : (
-                  <div className="grid max-h-48 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {slots.map((slot) => {
-                      const time = new Date(slot.datetime).toLocaleTimeString(
-                        "tr-TR",
-                        { hour: "2-digit", minute: "2-digit" }
-                      );
+                      const dt = new Date(slot.datetime.replace(" ", "T"));
+                      const hh = String(dt.getHours()).padStart(2, "0");
+                      const mm = String(dt.getMinutes()).padStart(2, "0");
+                      const time = `${hh}:${mm}`;
                       const isSelected =
                         selectedSlot?.datetime === slot.datetime &&
                         selectedSlot?.doctor_id === slot.doctor_id;
