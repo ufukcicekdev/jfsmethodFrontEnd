@@ -4,10 +4,15 @@
   "short_name": "JFS Method",
   "description": "Kişiselleştirilmiş dijital fizyoterapi platformu",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#f8fafc",
   "theme_color": "#93c5fd",
   "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "lang": "tr",
+  "dir": "ltr",
   "icons": [
     {
       "src": "/icon-192.png",
