@@ -23,10 +23,14 @@ export function OnboardingFlow({ onComplete }: Props) {
   useEffect(() => {
     const token = getAccessToken();
     if (!token) return;
-    api.onboarding.questions(token).then((qs) => {
-      setQuestions(qs);
-      setLoading(false);
-    });
+    api.onboarding.questions(token)
+      .then((qs) => {
+        setQuestions(qs);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
   }, []);
 
   const question = questions[current];
