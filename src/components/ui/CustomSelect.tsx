@@ -108,7 +108,10 @@ export function CustomSelect<T extends string | number>({
       if (event.key === "Escape") close();
     };
 
-    const handleScroll = () => close();
+    const handleScroll = (event: Event) => {
+      if (dropdownRef.current?.contains(event.target as Node)) return;
+      close();
+    };
 
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
