@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { getAccessToken } from "@/lib/auth";
 import { api, type ExerciseAssignment } from "@/lib/api";
@@ -27,6 +28,7 @@ function ExerciseDetailModal({
   const [painBefore, setPainBefore] = useState(0);
   const [painAfter, setPainAfter] = useState(0);
   const [completing, setCompleting] = useState(false);
+  const [lightbox, setLightbox] = useState<{ src: string; type: "image" | "video" } | null>(null);
 
   const handleComplete = async () => {
     setCompleting(true);
@@ -35,17 +37,32 @@ function ExerciseDetailModal({
     onClose();
   };
 
+  const mediaSrc = exercise.video_url ?? getExerciseImage(exercise);
+  const mediaType: "image" | "video" = exercise.video_url ? "video" : "image";
+
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center" onClick={onClose}>
       <div
         className="w-full max-w-lg rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl dark:bg-slate-900"
         onClick={(e) => e.stopPropagation()}
       >
-        <img
-          src={getExerciseImage(exercise)}
-          alt={exercise.title}
-          className="mb-4 h-48 w-full rounded-2xl object-cover"
-        />
+        <button
+          type="button"
+          className="relative mb-4 w-full"
+          onClick={() => setLightbox({ src: mediaSrc, type: mediaType })}
+          aria-label={exercise.video_url ? "Videoyu tam ekran oynat" : "Resmi tam ekran görüntüle"}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={getExerciseImage(exercise)}
+            alt={exercise.title}
+            className="h-48 w-full rounded-2xl object-cover"
+          />
+          <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-xs font-medium text-white">
+            {exercise.video_url ? "▶ Video" : "⛶ Büyüt"}
+          </span>
+        </button>
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50">{exercise.title}</h2>
@@ -114,6 +131,42 @@ function ExerciseDetailModal({
         </button>
       </div>
     </div>
+
+    {lightbox && typeof document !== "undefined" && createPortal(
+      <div
+        className="fixed inset-0 z-9999 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+        onClick={() => setLightbox(null)}
+      >
+        <button
+          type="button"
+          onClick={() => setLightbox(null)}
+          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40"
+          aria-label="Kapat"
+        >
+          ✕
+        </button>
+        {lightbox.type === "video" ? (
+          <video
+            src={lightbox.src}
+            controls
+            autoPlay
+            playsInline
+            className="max-h-[90vh] max-w-full rounded-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={lightbox.src}
+            alt=""
+            className="max-h-[90vh] max-w-full rounded-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
+      </div>,
+      document.body
+    )}
+    </>
   );
 }
 
