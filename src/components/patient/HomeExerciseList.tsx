@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CircularProgress } from "@/components/ui/CircularProgress";
 import { NeonSlider } from "@/components/ui/NeonSlider";
@@ -150,37 +151,29 @@ export function HomeExerciseList({
             className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 dark:bg-slate-900"
             onClick={(e) => e.stopPropagation()}
           >
-            {detailAssignment.exercise.video_url ? (
-              <video
-                src={detailAssignment.exercise.video_url}
-                controls
-                playsInline
+            <button
+              type="button"
+              className="relative w-full"
+              onClick={() =>
+                setLightboxSrc({
+                  src: detailAssignment.exercise.video_url
+                    ? detailAssignment.exercise.video_url
+                    : getExerciseImage(detailAssignment.exercise),
+                  type: detailAssignment.exercise.video_url ? "video" : "image",
+                })
+              }
+              aria-label={detailAssignment.exercise.video_url ? "Videoyu tam ekran oynat" : "Resmi tam ekran görüntüle"}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={getExerciseImage(detailAssignment.exercise)}
+                alt={detailAssignment.exercise.title}
                 className="aspect-16/10 w-full rounded-xl object-cover"
               />
-            ) : (
-              <button
-                type="button"
-                className="relative w-full"
-                onClick={() =>
-                  setLightboxSrc({
-                    src: getExerciseImage(detailAssignment.exercise),
-                    type: "image",
-                  })
-                }
-                aria-label="Resmi tam ekran görüntüle"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={getExerciseImage(detailAssignment.exercise)}
-                  alt={detailAssignment.exercise.title}
-                  className="aspect-16/10 w-full rounded-xl object-cover"
-                />
-                {/* Her zaman görünen büyüt ikonu — mobilde hover yok */}
-                <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-xs font-medium text-white">
-                  ⛶ Büyüt
-                </span>
-              </button>
-            )}
+              <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-xs font-medium text-white">
+                {detailAssignment.exercise.video_url ? "▶ Video" : "⛶ Büyüt"}
+              </span>
+            </button>
             <h3 className="mt-4 text-lg font-bold text-slate-900 dark:text-slate-50">
               {detailAssignment.exercise.title}
             </h3>
@@ -214,28 +207,42 @@ export function HomeExerciseList({
         </div>
       )}
 
-      {lightboxSrc && (
-        <div
-          className="fixed inset-0 z-9999 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
-          onClick={() => setLightboxSrc(null)}
-        >
-          <button
-            type="button"
+      {lightboxSrc &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-9999 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
             onClick={() => setLightboxSrc(null)}
-            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40"
-            aria-label="Kapat"
           >
-            ✕
-          </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={lightboxSrc.src}
-            alt=""
-            className="max-h-[90vh] max-w-full rounded-2xl object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
+            <button
+              type="button"
+              onClick={() => setLightboxSrc(null)}
+              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40"
+              aria-label="Kapat"
+            >
+              ✕
+            </button>
+            {lightboxSrc.type === "video" ? (
+              <video
+                src={lightboxSrc.src}
+                controls
+                autoPlay
+                playsInline
+                className="max-h-[90vh] max-w-full rounded-2xl object-contain"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={lightboxSrc.src}
+                alt=""
+                className="max-h-[90vh] max-w-full rounded-2xl object-contain"
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
+          </div>,
+          document.body
+        )}
 
       {completeAssignment && (
         <div
