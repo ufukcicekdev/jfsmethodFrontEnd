@@ -29,6 +29,7 @@ export function HomeExerciseList({
 }: HomeExerciseListProps) {
   const [detailId, setDetailId] = useState<number | null>(null);
   const [completeId, setCompleteId] = useState<number | null>(null);
+  const [lightboxSrc, setLightboxSrc] = useState<{ src: string; type: "image" | "video" } | null>(null);
   const [painBefore, setPainBefore] = useState(3);
   const [painAfter, setPainAfter] = useState(2);
   const [completingId, setCompletingId] = useState<number | null>(null);
@@ -157,12 +158,29 @@ export function HomeExerciseList({
                 className="aspect-16/10 w-full rounded-xl object-cover"
               />
             ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={getExerciseImage(detailAssignment.exercise)}
-                alt={detailAssignment.exercise.title}
-                className="aspect-16/10 w-full rounded-xl object-cover"
-              />
+              <button
+                type="button"
+                className="relative w-full"
+                onClick={() =>
+                  setLightboxSrc({
+                    src: getExerciseImage(detailAssignment.exercise),
+                    type: "image",
+                  })
+                }
+                title="Büyütmek için tıklayın"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={getExerciseImage(detailAssignment.exercise)}
+                  alt={detailAssignment.exercise.title}
+                  className="aspect-16/10 w-full rounded-xl object-cover"
+                />
+                <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/0 transition-colors hover:bg-black/20">
+                  <span className="rounded-full bg-black/40 px-3 py-1 text-xs text-white opacity-0 transition-opacity hover:opacity-100">
+                    ⛶ Tam ekran
+                  </span>
+                </div>
+              </button>
             )}
             <h3 className="mt-4 text-lg font-bold text-slate-900 dark:text-slate-50">
               {detailAssignment.exercise.title}
@@ -194,6 +212,29 @@ export function HomeExerciseList({
               Kapat
             </button>
           </div>
+        </div>
+      )}
+
+      {lightboxSrc && (
+        <div
+          className="fixed inset-0 z-9999 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+          onClick={() => setLightboxSrc(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxSrc(null)}
+            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40"
+            aria-label="Kapat"
+          >
+            ✕
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightboxSrc.src}
+            alt=""
+            className="max-h-[90vh] max-w-full rounded-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
 

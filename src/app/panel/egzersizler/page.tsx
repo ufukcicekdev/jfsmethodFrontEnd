@@ -52,6 +52,7 @@ export default function ExerciseLibraryPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [lightbox, setLightbox] = useState<{ src: string; type: "image" | "video" } | null>(null);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -245,14 +246,30 @@ export default function ExerciseLibraryPage() {
               key={ex.id}
               className={`overflow-hidden p-0 ${ex.is_active ? "" : "opacity-70"}`}
             >
-              <div className="relative aspect-16/10 w-full overflow-hidden bg-slate-100 dark:bg-slate-700/40">
+              <button
+                type="button"
+                className="relative aspect-16/10 w-full overflow-hidden bg-slate-100 dark:bg-slate-700/40"
+                onClick={() =>
+                  setLightbox(
+                    ex.video_url
+                      ? { src: ex.video_url, type: "video" }
+                      : { src: getExerciseImage(ex), type: "image" }
+                  )
+                }
+                title={ex.video_url ? "Videoyu oynat" : "Resmi büyüt"}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={getExerciseImage(ex)}
                   alt={ex.title}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-cover transition-transform hover:scale-105"
                   loading="lazy"
                 />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors hover:bg-black/25">
+                  <span className="rounded-full bg-black/50 px-3 py-1.5 text-sm text-white opacity-0 transition-opacity hover:opacity-100">
+                    {ex.video_url ? "▶ Oynat" : "⛶ Büyüt"}
+                  </span>
+                </div>
                 {!ex.is_active && (
                   <span className="absolute left-3 top-3 rounded-full bg-slate-700/80 px-2 py-0.5 text-[10px] font-medium text-white">
                     Pasif
@@ -263,7 +280,7 @@ export default function ExerciseLibraryPage() {
                     ▶ Video
                   </span>
                 )}
-              </div>
+              </button>
               <div className="p-4">
                 <p className="font-semibold text-slate-900 dark:text-slate-100">
                   {ex.title}
@@ -486,6 +503,40 @@ export default function ExerciseLibraryPage() {
           </div>
         </form>
       </GlassCard>
+
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-9999 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setLightbox(null)}
+            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40"
+            aria-label="Kapat"
+          >
+            ✕
+          </button>
+          {lightbox.type === "video" ? (
+            <video
+              src={lightbox.src}
+              controls
+              autoPlay
+              playsInline
+              className="max-h-[90vh] max-w-full rounded-2xl object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={lightbox.src}
+              alt=""
+              className="max-h-[90vh] max-w-full rounded-2xl object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
