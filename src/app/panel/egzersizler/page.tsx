@@ -49,6 +49,8 @@ export default function ExerciseLibraryPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
@@ -77,6 +79,8 @@ export default function ExerciseLibraryPage() {
     setEditingId(null);
     setImageFile(null);
     setImagePreview(null);
+    setVideoFile(null);
+    setVideoPreview(null);
   };
 
   const startEdit = (ex: Exercise) => {
@@ -94,6 +98,8 @@ export default function ExerciseLibraryPage() {
     });
     setImageFile(null);
     setImagePreview(null);
+    setVideoFile(null);
+    setVideoPreview(null);
     window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   };
 
@@ -101,6 +107,12 @@ export default function ExerciseLibraryPage() {
     if (!file) return;
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleVideo = (file: File | undefined) => {
+    if (!file) return;
+    setVideoFile(file);
+    setVideoPreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -130,6 +142,7 @@ export default function ExerciseLibraryPage() {
       difficulty: form.difficulty,
       is_active: form.is_active,
       image: imageFile,
+      video: videoFile,
     };
     try {
       if (editingId) {
@@ -243,6 +256,11 @@ export default function ExerciseLibraryPage() {
                 {!ex.is_active && (
                   <span className="absolute left-3 top-3 rounded-full bg-slate-700/80 px-2 py-0.5 text-[10px] font-medium text-white">
                     Pasif
+                  </span>
+                )}
+                {ex.video_url && (
+                  <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white">
+                    ▶ Video
                   </span>
                 )}
               </div>
@@ -404,6 +422,29 @@ export default function ExerciseLibraryPage() {
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 onChange={(e) => handleImage(e.target.files?.[0])}
+                className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-full file:border-0 file:bg-blue-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-blue-600 dark:text-slate-300"
+              />
+            </div>
+          </FormGroup>
+
+          <FormGroup label="Video (opsiyonel — MP4, MOV veya WebM, maks. 100 MB)">
+            <div className="flex items-start gap-4">
+              {(videoPreview ?? (editingId ? exercises.find((e) => e.id === editingId)?.video_url : null)) ? (
+                <video
+                  src={videoPreview ?? exercises.find((e) => e.id === editingId)?.video_url ?? undefined}
+                  className="h-20 w-28 shrink-0 rounded-xl border border-slate-200/80 object-cover dark:border-slate-600/50"
+                  muted
+                  playsInline
+                />
+              ) : (
+                <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-300/70 bg-slate-100 dark:border-slate-600/50 dark:bg-slate-700/40">
+                  <span className="text-2xl text-slate-400">▶</span>
+                </div>
+              )}
+              <input
+                type="file"
+                accept="video/mp4,video/quicktime,video/webm"
+                onChange={(e) => handleVideo(e.target.files?.[0])}
                 className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-full file:border-0 file:bg-blue-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-blue-600 dark:text-slate-300"
               />
             </div>

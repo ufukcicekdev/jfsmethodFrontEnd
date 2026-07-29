@@ -149,12 +149,21 @@ export function HomeExerciseList({
             className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 dark:bg-slate-900"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={getExerciseImage(detailAssignment.exercise)}
-              alt={detailAssignment.exercise.title}
-              className="aspect-16/10 w-full rounded-xl object-cover"
-            />
+            {detailAssignment.exercise.video_url ? (
+              <video
+                src={detailAssignment.exercise.video_url}
+                controls
+                playsInline
+                className="aspect-16/10 w-full rounded-xl object-cover"
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={getExerciseImage(detailAssignment.exercise)}
+                alt={detailAssignment.exercise.title}
+                className="aspect-16/10 w-full rounded-xl object-cover"
+              />
+            )}
             <h3 className="mt-4 text-lg font-bold text-slate-900 dark:text-slate-50">
               {detailAssignment.exercise.title}
             </h3>

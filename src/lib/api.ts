@@ -751,6 +751,7 @@ export interface Exercise {
   title: string;
   description: string;
   image_url: string | null;
+  video_url: string | null;
   instructions: string;
   target_region: BodyRegion | "";
   target_region_label: string;
@@ -1421,6 +1422,7 @@ export const api = {
         difficulty?: string;
         is_active?: boolean;
         image?: File | null;
+        video?: File | null;
       }
     ) => {
       const formData = new FormData();
@@ -1437,6 +1439,7 @@ export const api = {
       if (data.is_active != null)
         formData.append("is_active", String(data.is_active));
       if (data.image) formData.append("image", data.image);
+      if (data.video) formData.append("video", data.video);
       return apiUpload<Exercise>("/admin/exercises/", formData, token);
     },
 
@@ -1454,6 +1457,7 @@ export const api = {
         difficulty?: string;
         is_active?: boolean;
         image?: File | null;
+        video?: File | null;
       }
     ) => {
       const formData = new FormData();
@@ -1473,6 +1477,7 @@ export const api = {
       if (data.is_active != null)
         formData.append("is_active", String(data.is_active));
       if (data.image) formData.append("image", data.image);
+      if (data.video) formData.append("video", data.video);
       return apiUpload<Exercise>(
         `/admin/exercises/${exerciseId}/`,
         formData,
