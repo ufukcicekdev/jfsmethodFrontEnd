@@ -167,7 +167,7 @@ export function HomeExerciseList({
                     type: "image",
                   })
                 }
-                title="Büyütmek için tıklayın"
+                aria-label="Resmi tam ekran görüntüle"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -175,11 +175,10 @@ export function HomeExerciseList({
                   alt={detailAssignment.exercise.title}
                   className="aspect-16/10 w-full rounded-xl object-cover"
                 />
-                <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/0 transition-colors hover:bg-black/20">
-                  <span className="rounded-full bg-black/40 px-3 py-1 text-xs text-white opacity-0 transition-opacity hover:opacity-100">
-                    ⛶ Tam ekran
-                  </span>
-                </div>
+                {/* Her zaman görünen büyüt ikonu — mobilde hover yok */}
+                <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-xs font-medium text-white">
+                  ⛶ Büyüt
+                </span>
               </button>
             )}
             <h3 className="mt-4 text-lg font-bold text-slate-900 dark:text-slate-50">

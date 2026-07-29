@@ -265,11 +265,9 @@ export default function ExerciseLibraryPage() {
                   className="h-full w-full object-cover transition-transform hover:scale-105"
                   loading="lazy"
                 />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors hover:bg-black/25">
-                  <span className="rounded-full bg-black/50 px-3 py-1.5 text-sm text-white opacity-0 transition-opacity hover:opacity-100">
-                    {ex.video_url ? "▶ Oynat" : "⛶ Büyüt"}
-                  </span>
-                </div>
+                <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-xs font-medium text-white">
+                  {ex.video_url ? "▶ Oynat" : "⛶ Büyüt"}
+                </span>
                 {!ex.is_active && (
                   <span className="absolute left-3 top-3 rounded-full bg-slate-700/80 px-2 py-0.5 text-[10px] font-medium text-white">
                     Pasif
