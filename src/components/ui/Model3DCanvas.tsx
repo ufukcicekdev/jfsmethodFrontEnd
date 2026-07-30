@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { BodyRegion } from "@/lib/bodyRegions";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
 const HeroScene = dynamic(() => import("@/components/three/HeroScene"), {
   ssr: false,
@@ -44,18 +45,20 @@ export function Model3DCanvas({
   onSelectRegion,
 }: Model3DCanvasProps) {
   return (
-    <div className={`relative overflow-hidden ${className}`}>
-      {variant === "hero" ? (
-        <HeroScene />
-      ) : (
-        <DigitalTwinScene
-          height={height}
-          weight={weight}
-          levelByRegion={levelByRegion}
-          selectedRegion={selectedRegion}
-          onSelectRegion={onSelectRegion}
-        />
-      )}
-    </div>
+    <ErrorBoundary fallback={<div className={className} />}>
+      <div className={`relative overflow-hidden ${className}`}>
+        {variant === "hero" ? (
+          <HeroScene />
+        ) : (
+          <DigitalTwinScene
+            height={height}
+            weight={weight}
+            levelByRegion={levelByRegion}
+            selectedRegion={selectedRegion}
+            onSelectRegion={onSelectRegion}
+          />
+        )}
+      </div>
+    </ErrorBoundary>
   );
 }
