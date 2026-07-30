@@ -23,6 +23,7 @@ const ACTION_LABELS: Record<string, string> = {
   patient_delete: "Öğrenci Silme",
   password_change: "Şifre Değiştirme",
   onboarding_submit: "Onboarding Tamamlandı",
+  frontend_error: "Frontend Hatası",
   other: "Diğer",
 };
 
@@ -44,6 +45,7 @@ const ACTION_COLORS: Record<string, string> = {
   attendance_mark: "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300",
   attendance_delete: "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
   onboarding_submit: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300",
+  frontend_error: "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300",
 };
 
 export default function AuditLogPage() {
