@@ -11,6 +11,17 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error(error);
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+    fetch(`${API_BASE}/log-error/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: error.message,
+        stack: error.stack ?? "",
+        url: typeof window !== "undefined" ? window.location.href : "",
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+      }),
+    }).catch(() => {});
   }, [error]);
 
   return (
