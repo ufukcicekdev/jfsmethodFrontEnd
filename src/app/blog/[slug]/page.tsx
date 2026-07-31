@@ -35,11 +35,12 @@ async function getPost(slug: string): Promise<BlogPost | null> {
 
 async function getRecentPosts(): Promise<BlogPost[]> {
   try {
-    const res = await fetch(`${API_URL}/blog/`, {
+    const res = await fetch(`${API_URL}/blog/?page_size=6`, {
       next: { revalidate: 300 },
     });
     if (!res.ok) return [];
-    return res.json();
+    const data = await res.json();
+    return Array.isArray(data) ? data : (data.results ?? []);
   } catch {
     return [];
   }
