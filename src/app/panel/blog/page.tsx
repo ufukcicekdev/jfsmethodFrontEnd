@@ -2,10 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { Pagination } from "@/components/ui/Pagination";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { getAccessToken } from "@/lib/auth";
 import { api, type BlogPost, type BlogTopic } from "@/lib/api";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
+
+const PAGE_SIZE = 20;
 
 const SUGGESTED_TOPICS = [
   "Bel fıtığında evde yapılabilecek egzersizler",
@@ -33,6 +36,8 @@ export default function AdminBlogPage() {
   const confirm = useConfirm();
   const [tab, setTab] = useState<Tab>("posts");
   const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [postsTotal, setPostsTotal] = useState(0);
+  const [postsPage, setPostsPage] = useState(1);
   const [topics, setTopics] = useState<BlogTopic[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
@@ -69,23 +74,24 @@ export default function AdminBlogPage() {
     setTimeout(() => setMsg(null), 4000);
   };
 
-  const loadData = async () => {
+  const loadData = async (page = postsPage) => {
     const token = getAccessToken();
     if (!token) return;
     setLoading(true);
     try {
       const [p, t] = await Promise.all([
-        api.admin.blog.posts.list(token),
+        api.admin.blog.posts.list(token, page, PAGE_SIZE),
         api.admin.blog.topics.list(token),
       ]);
-      setPosts(p);
+      setPosts(p.results);
+      setPostsTotal(p.count);
       setTopics(t);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(postsPage); }, [postsPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Post actions ─────────────────────────────────────────────────────────────
 
@@ -127,7 +133,7 @@ export default function AdminBlogPage() {
         notify("Yazı oluşturuldu.", "success");
       }
       setShowPostForm(false);
-      loadData();
+      loadData(postsPage);
     } catch (err) {
       notify(err instanceof Error ? err.message : "Hata.", "error");
     } finally {
@@ -140,7 +146,7 @@ export default function AdminBlogPage() {
     if (!token) return;
     try {
       await api.admin.blog.posts.update(token, post.id, { is_published: !post.is_published });
-      loadData();
+      loadData(postsPage);
     } catch {
       notify("Durum değiştirilemedi.", "error");
     }
@@ -154,7 +160,7 @@ export default function AdminBlogPage() {
     try {
       await api.admin.blog.posts.delete(token, post.id);
       notify("Yazı silindi.", "success");
-      loadData();
+      loadData(postsPage);
     } catch {
       notify("Silinemedi.", "error");
     }
@@ -175,7 +181,7 @@ export default function AdminBlogPage() {
       await api.admin.blog.topics.create(token, topicForm);
       notify("Konu eklendi.", "success");
       setTopicForm({ topic: "", scheduled_date: "" });
-      loadData();
+      loadData(postsPage);
     } catch (err) {
       notify(err instanceof Error ? err.message : "Hata.", "error");
     } finally {
@@ -191,7 +197,7 @@ export default function AdminBlogPage() {
     try {
       await api.admin.blog.topics.delete(token, topic.id);
       notify("Konu silindi.", "success");
-      loadData();
+      loadData(postsPage);
     } catch {
       notify("Silinemedi.", "error");
     }
@@ -215,7 +221,7 @@ export default function AdminBlogPage() {
       notify(`"${post.title}" oluşturuldu ve yayınlandı.`, "success");
       setGenTopic("");
       setGenTopicId("");
-      loadData();
+      loadData(postsPage);
       setTab("posts");
     } catch (err) {
       notify(err instanceof Error ? err.message : "Gemini API hatası.", "error");
@@ -255,7 +261,7 @@ export default function AdminBlogPage() {
             onClick={() => setTab(t)}
             className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${tab === t ? "bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}
           >
-            {t === "posts" ? `Yazılar (${posts.length})` : t === "topics" ? `Konu Kuyruğu (${topics.length})` : "AI Üret"}
+            {t === "posts" ? `Yazılar (${postsTotal})` : t === "topics" ? `Konu Kuyruğu (${topics.length})` : "AI Üret"}
           </button>
         ))}
       </div>
@@ -350,6 +356,14 @@ export default function AdminBlogPage() {
                   </div>
                 </GlassCard>
               ))}
+              {Math.ceil(postsTotal / PAGE_SIZE) > 1 && (
+                <GlassCard className="p-3">
+                  <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+                    <span className="text-xs text-slate-500">{postsTotal} yazı · Sayfa {postsPage}/{Math.ceil(postsTotal / PAGE_SIZE)}</span>
+                    <Pagination page={postsPage} totalPages={Math.ceil(postsTotal / PAGE_SIZE)} onPageChange={setPostsPage} />
+                  </div>
+                </GlassCard>
+              )}
             </div>
           )}
         </>

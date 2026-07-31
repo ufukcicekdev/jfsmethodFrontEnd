@@ -1777,7 +1777,7 @@ export const api = {
     },
     blog: {
       posts: {
-        list: (token: string) => apiFetch<BlogPost[]>("/admin/blog/posts/", { token }),
+        list: (token: string, page = 1, pageSize = 20) => apiFetch<PaginatedResponse<BlogPost>>(`/admin/blog/posts/?page=${page}&page_size=${pageSize}`, { token }),
         get: (token: string, id: number) => apiFetch<BlogPost>(`/admin/blog/posts/${id}/`, { token }),
         create: (token: string, data: { title: string; content: string; is_published: boolean; topic?: number | null }) =>
           apiFetch<BlogPost>("/admin/blog/posts/", { token, method: "POST", body: JSON.stringify(data) }),
