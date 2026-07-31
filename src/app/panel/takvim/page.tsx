@@ -95,8 +95,9 @@ export default function CalendarPage() {
       .appointments(token, {
         dateFrom: toIsoDate(weekStart),
         dateTo: toIsoDate(addDays(weekStart, 6)),
+        pageSize: 200,
       })
-      .then(setAppointments)
+      .then(({ results }) => setAppointments(results))
       .catch(() => setError("Takvim yüklenemedi."))
       .finally(() => setLoading(false));
   }, [weekStart]);

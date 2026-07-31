@@ -5,9 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { FormField } from "@/components/ui/FormField";
+import { Pagination } from "@/components/ui/Pagination";
 import { AdminCreateAppointmentForm } from "@/components/admin/AdminCreateAppointmentForm";
 import { getAccessToken } from "@/lib/auth";
 import { api, type Appointment } from "@/lib/api";
+
+const PAGE_SIZE = 20;
 
 const STATUS_LABELS: Record<Appointment["status"], string> = {
   pending: "Beklemede",
@@ -55,6 +58,8 @@ export default function AppointmentsPage() {
   const searchParams = useSearchParams();
   const statusFilter = searchParams.get("status") ?? "";
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [postponingId, setPostponingId] = useState<number | null>(null);
@@ -66,22 +71,29 @@ export default function AppointmentsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [success, setSuccess] = useState("");
 
-  const loadAppointments = () => {
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  const loadAppointments = (p: number) => {
     const token = getAccessToken();
     if (!token) return;
 
     setLoading(true);
     api.admin
-      .appointments(token, { status: statusFilter || undefined })
-      .then(setAppointments)
+      .appointments(token, { status: statusFilter || undefined, page: p, pageSize: PAGE_SIZE })
+      .then((data) => { setAppointments(data.results); setTotal(data.count); })
       .catch(() => setError("Randevular yüklenemedi."))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    loadAppointments();
+    setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
+
+  useEffect(() => {
+    loadAppointments(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, page]);
 
   const handleFormMessage = (message: string, type: "success" | "error") => {
     if (type === "error") {
@@ -166,7 +178,7 @@ export default function AppointmentsPage() {
 
       {showCreate && (
         <AdminCreateAppointmentForm
-          onCreated={loadAppointments}
+          onCreated={() => loadAppointments(1)}
           onClose={() => setShowCreate(false)}
           onMessage={handleFormMessage}
         />
@@ -378,6 +390,14 @@ export default function AppointmentsPage() {
               )}
             </GlassCard>
           ))}
+          {totalPages > 1 && (
+            <GlassCard className="p-3">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+                <span className="text-xs text-slate-500">{total} randevu · Sayfa {page}/{totalPages}</span>
+                <Pagination page={page} totalPages={totalPages} onPageChange={(p) => { setPage(p); setPostponingId(null); }} />
+              </div>
+            </GlassCard>
+          )}
         </div>
       )}
     </div>

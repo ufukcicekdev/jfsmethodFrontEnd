@@ -1167,18 +1167,17 @@ export const api = {
 
     appointments: async (
       token: string,
-      options?: { status?: string; dateFrom?: string; dateTo?: string }
+      options?: { status?: string; dateFrom?: string; dateTo?: string; page?: number; pageSize?: number }
     ) => {
       const search = new URLSearchParams();
       if (options?.status) search.set("status", options.status);
       if (options?.dateFrom) search.set("date_from", options.dateFrom);
       if (options?.dateTo) search.set("date_to", options.dateTo);
-      const qs = search.toString();
-      return unwrapPaginatedList(
-        await apiFetch<Appointment[] | PaginatedResponse<Appointment>>(
-          `/admin/appointments/${qs ? `?${qs}` : ""}`,
-          { token }
-        )
+      search.set("page", String(options?.page ?? 1));
+      search.set("page_size", String(options?.pageSize ?? 20));
+      return apiFetch<PaginatedResponse<Appointment>>(
+        `/admin/appointments/?${search.toString()}`,
+        { token }
       );
     },
 
