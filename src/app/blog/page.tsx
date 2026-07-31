@@ -6,6 +6,7 @@ import { FilterTabs } from "./FilterTabs";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://jfsmethod.com";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://jfsmethod.com/api";
+const PAGE_SIZE = 12;
 
 export const metadata: Metadata = {
   title: "Blog | JFS Method — Fizyoterapi & Sağlıklı Yaşam",
@@ -39,13 +40,20 @@ interface BlogPost {
   excerpt?: string;
 }
 
-async function getPosts(): Promise<BlogPost[]> {
+interface BlogListResponse {
+  count: number;
+  results: BlogPost[];
+  popular: BlogPost[];
+}
+
+async function getPosts(page: number, sort: string): Promise<BlogListResponse> {
   try {
-    const res = await fetch(`${API_URL}/blog/`, { next: { revalidate: 300 } });
-    if (!res.ok) return [];
+    const q = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE), sort });
+    const res = await fetch(`${API_URL}/blog/?${q}`, { next: { revalidate: 300 } });
+    if (!res.ok) return { count: 0, results: [], popular: [] };
     return res.json();
   } catch {
-    return [];
+    return { count: 0, results: [], popular: [] };
   }
 }
 
@@ -79,7 +87,6 @@ function FeaturedCard({ post }: { post: BlogPost }) {
           </>
         ) : (
           <>
-            {/* Light: koyu lacivert-slate / Dark: canlı violet-blue */}
             <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 dark:from-blue-600 dark:via-violet-700 dark:to-indigo-900" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
             <div className="absolute right-8 top-8 h-56 w-56 rounded-full bg-white/5 dark:bg-white/10 blur-3xl" />
@@ -120,11 +127,11 @@ function FeaturedCard({ post }: { post: BlogPost }) {
 }
 
 // ── Normal kart ───────────────────────────────────────────────────────────────
-function PostCard({ post, large }: { post: BlogPost; large?: boolean }) {
+function PostCard({ post }: { post: BlogPost }) {
   return (
     <Link href={`/blog/${post.slug}`} className="group block h-full">
-      <article className={`h-full flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 dark:border-slate-700/60 dark:bg-slate-900/80 ${large ? "sm:flex-row" : ""}`}>
-        <div className={`overflow-hidden bg-gradient-to-br from-blue-100 to-violet-100 dark:from-slate-800 dark:to-slate-700 ${large ? "sm:w-2/5 sm:shrink-0 aspect-video sm:aspect-auto" : "aspect-video"}`}>
+      <article className="h-full flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 dark:border-slate-700/60 dark:bg-slate-900/80">
+        <div className="overflow-hidden bg-gradient-to-br from-blue-100 to-violet-100 dark:from-slate-800 dark:to-slate-700 aspect-video">
           {post.cover_image ? (
             <img src={post.cover_image} alt={post.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
           ) : (
@@ -141,7 +148,7 @@ function PostCard({ post, large }: { post: BlogPost; large?: boolean }) {
             <span className="text-slate-300 dark:text-slate-600 text-xs">·</span>
             <span className="text-xs text-slate-400 dark:text-slate-500">{readingTime(post.excerpt ?? "")} dk</span>
           </div>
-          <h2 className={`font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug line-clamp-2 ${large ? "text-lg" : "text-sm"}`}>
+          <h2 className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug line-clamp-2 text-sm">
             {post.title}
           </h2>
           <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 line-clamp-2 flex-1 leading-relaxed">
@@ -186,22 +193,63 @@ function PopularPost({ post, rank }: { post: BlogPost; rank: number }) {
   );
 }
 
+// ── SSR Pagination links ──────────────────────────────────────────────────────
+function PaginationLinks({ page, totalPages, sort }: { page: number; totalPages: number; sort: string }) {
+  if (totalPages <= 1) return null;
+
+  const sortParam = sort !== "newest" ? `&sort=${sort}` : "";
+
+  const pages: (number | "…")[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (page > 3) pages.push("…");
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+    if (page < totalPages - 2) pages.push("…");
+    pages.push(totalPages);
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-1 pt-4">
+      {page > 1 && (
+        <Link href={`/blog?page=${page - 1}${sortParam}`} className="rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">‹</Link>
+      )}
+      {pages.map((p, i) =>
+        p === "…" ? (
+          <span key={`e-${i}`} className="px-2 text-slate-400">…</span>
+        ) : (
+          <Link
+            key={p}
+            href={`/blog?page=${p}${sortParam}`}
+            className={`min-w-[2rem] rounded-lg px-3 py-1.5 text-center text-sm font-medium transition-colors ${p === page ? "bg-blue-500 text-white" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"}`}
+          >
+            {p}
+          </Link>
+        )
+      )}
+      {page < totalPages && (
+        <Link href={`/blog?page=${page + 1}${sortParam}`} className="rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">›</Link>
+      )}
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default async function BlogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string }>;
+  searchParams: Promise<{ sort?: string; page?: string }>;
 }) {
-  const { sort } = await searchParams;
-  const posts = await getPosts();
+  const { sort = "newest", page: pageStr } = await searchParams;
+  const page = Math.max(1, parseInt(pageStr ?? "1") || 1);
+  const data = await getPosts(page, sort);
 
-  const sorted = sort === "popular"
-    ? [...posts].sort((a, b) => b.view_count - a.view_count)
-    : posts;
+  const { count, results, popular } = data;
+  const totalPages = Math.ceil(count / PAGE_SIZE);
 
-  const popular = [...posts].sort((a, b) => b.view_count - a.view_count).slice(0, 5);
-  const featured = sorted[0] ?? null;
-  const rest = sorted.slice(1);
+  const featured = page === 1 ? results[0] ?? null : null;
+  const rest = page === 1 ? results.slice(1) : results;
 
   return (
     <>
@@ -210,10 +258,8 @@ export default async function BlogPage({
 
         {/* Hero header */}
         <div className="relative overflow-hidden border-b border-slate-200 dark:border-slate-800/60 pb-12 pt-32">
-          {/* Light: beyaz → hafif mavi-violet; Dark: siyah → mavi tint */}
           <div className="absolute inset-0 bg-gradient-to-b from-indigo-50 via-white to-white dark:from-slate-900 dark:via-slate-950 dark:to-slate-950" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_0%,rgba(139,92,246,0.12),transparent)] dark:bg-[radial-gradient(ellipse_70%_50%_at_50%_0%,rgba(59,130,246,0.18),transparent)]" />
-          {/* Dekoratif blob */}
           <div className="absolute -top-20 right-1/4 h-80 w-80 rounded-full bg-violet-200/40 dark:bg-violet-900/15 blur-3xl pointer-events-none" />
           <div className="absolute -top-10 left-1/3 h-60 w-60 rounded-full bg-blue-200/40 dark:bg-blue-900/15 blur-3xl pointer-events-none" />
 
@@ -236,7 +282,7 @@ export default async function BlogPage({
 
         {/* İçerik */}
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          {posts.length === 0 ? (
+          {count === 0 ? (
             <div className="flex flex-col items-center justify-center py-32 text-center">
               <div className="mb-4 rounded-full bg-slate-100 dark:bg-slate-800 p-6">
                 <svg className="h-10 w-10 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
@@ -254,22 +300,22 @@ export default async function BlogPage({
                 {/* Filtre */}
                 <div className="flex items-center justify-between gap-4">
                   <p className="text-sm text-slate-400 dark:text-slate-500">
-                    <span className="font-semibold text-slate-700 dark:text-slate-200">{posts.length}</span> yazı
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">{count}</span> yazı
                   </p>
                   <Suspense fallback={null}>
                     <FilterTabs />
                   </Suspense>
                 </div>
 
-                {/* Featured */}
+                {/* Featured — sadece 1. sayfada */}
                 {featured && <FeaturedCard post={featured} />}
 
-                {/* Rest */}
+                {/* Yazı ızgarası */}
                 {rest.length > 0 && (
                   <div>
                     <div className="flex items-center gap-3 mb-5">
                       <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                        {sort === "popular" ? "En Çok Okunanlar" : "Son Yazılar"}
+                        {sort === "popular" ? "En Çok Okunanlar" : page > 1 ? `Sayfa ${page}` : "Son Yazılar"}
                       </h2>
                       <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
                     </div>
@@ -280,6 +326,9 @@ export default async function BlogPage({
                     </div>
                   </div>
                 )}
+
+                {/* Pagination */}
+                <PaginationLinks page={page} totalPages={totalPages} sort={sort} />
               </div>
 
               {/* Sağ — sidebar */}
