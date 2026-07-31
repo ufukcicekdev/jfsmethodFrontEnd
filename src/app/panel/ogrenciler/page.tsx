@@ -5,6 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { FormInput } from "@/components/ui/FormField";
+import { Pagination } from "@/components/ui/Pagination";
+
+const PAGE_SIZE = 20;
 import { AdminCreatePatientForm } from "@/components/admin/AdminCreatePatientForm";
 import { getAccessToken, setTokens } from "@/lib/auth";
 import { api, type AdminPatient } from "@/lib/api";
@@ -218,29 +221,33 @@ function AttendanceBar({
 
 export default function StudentsPage() {
   const [patients, setPatients] = useState<AdminPatient[]>([]);
+  const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [page, setPage] = useState(1);
 
-  const loadPatients = () => {
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  const loadPatients = (p: number) => {
     const token = getAccessToken();
     if (!token) return;
     setLoading(true);
     api.admin
-      .patients(token, search.trim() || undefined)
-      .then(setPatients)
+      .patients(token, search.trim() || undefined, p, PAGE_SIZE)
+      .then((data) => { setPatients(data.results); setTotal(data.count); })
       .catch(() => setError("Öğrenciler yüklenemedi."))
       .finally(() => setLoading(false));
   };
 
+  useEffect(() => { setPage(1); }, [search]);
+
   useEffect(() => {
-    const token = getAccessToken();
-    if (!token) return;
-    const timer = setTimeout(loadPatients, 300);
+    const timer = setTimeout(() => loadPatients(page), 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
+  }, [search, page]);
 
   const handleMarked = (patientId: number, newStatus: "came" | "no_show" | null) => {
     setPatients((prev) =>
@@ -262,6 +269,8 @@ export default function StudentsPage() {
       })
     );
   };
+
+  const handlePageChange = (p: number) => setPage(p);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -285,7 +294,7 @@ export default function StudentsPage() {
       </div>
 
       {showCreate && (
-        <AdminCreatePatientForm onCreated={loadPatients} onClose={() => setShowCreate(false)} />
+        <AdminCreatePatientForm onCreated={() => loadPatients(1)} onClose={() => setShowCreate(false)} />
       )}
 
       <GlassCard className="p-4 sm:p-6">
@@ -403,12 +412,20 @@ export default function StudentsPage() {
                   <AttendanceBar
                     patientId={patient.id}
                     activePackages={patient.active_packages ?? []}
-                    onMarked={loadPatients}
+                    onMarked={() => loadPatients(page)}
                   />
                 )}
               </GlassCard>
             );
           })}
+          {totalPages > 1 && (
+            <GlassCard className="p-3">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+                <span className="text-xs text-slate-500">{total} öğrenci · Sayfa {page}/{totalPages}</span>
+                <Pagination page={page} totalPages={totalPages} onPageChange={handlePageChange} />
+              </div>
+            </GlassCard>
+          )}
         </div>
       )}
     </div>

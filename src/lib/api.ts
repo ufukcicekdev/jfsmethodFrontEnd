@@ -1065,14 +1065,10 @@ export const api = {
     dashboard: (token: string) =>
       apiFetch<AdminDashboard>("/admin/dashboard/", { token }),
 
-    patients: async (token: string, search?: string) => {
-      const params = search ? `?search=${encodeURIComponent(search)}` : "";
-      return unwrapPaginatedList(
-        await apiFetch<AdminPatient[] | PaginatedResponse<AdminPatient>>(
-          `/admin/patients/${params}`,
-          { token }
-        )
-      );
+    patients: async (token: string, search?: string, page = 1, pageSize = 20) => {
+      const q = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+      if (search) q.set("search", search);
+      return apiFetch<PaginatedResponse<AdminPatient>>(`/admin/patients/?${q}`, { token });
     },
 
     patient: (token: string, id: number) =>
@@ -1837,12 +1833,14 @@ export const api = {
         token,
         method: "POST",
       }),
-    auditLogs: (token: string, params?: { action?: string; status?: string; search?: string }) => {
+    auditLogs: (token: string, params?: { action?: string; status?: string; search?: string; page?: number; pageSize?: number }) => {
       const q = new URLSearchParams();
       if (params?.action) q.set("action", params.action);
       if (params?.status) q.set("status", params.status);
       if (params?.search) q.set("search", params.search);
-      return apiFetch<AuditLog[]>(`/admin/audit-logs/?${q.toString()}`, { token });
+      q.set("page", String(params?.page ?? 1));
+      q.set("page_size", String(params?.pageSize ?? 25));
+      return apiFetch<PaginatedResponse<AuditLog>>(`/admin/audit-logs/?${q.toString()}`, { token });
     },
   },
   myDiets: {

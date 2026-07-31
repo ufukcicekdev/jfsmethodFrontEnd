@@ -29,10 +29,10 @@ export default function BildirimGonderPage() {
     if (!token) return;
 
     api.admin
-      .patients(token)
-      .then((data) => {
-        setPatients(data);
-        setFilteredPatients(data);
+      .patients(token, undefined, 1, 1000)
+      .then(({ results }) => {
+        setPatients(results);
+        setFilteredPatients(results);
       })
       .catch(() => {
         setFeedback({ type: "error", message: "Öğrenciler yüklenemedi." });

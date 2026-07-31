@@ -3,8 +3,11 @@
 import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { FormInput } from "@/components/ui/FormField";
+import { Pagination } from "@/components/ui/Pagination";
 import { getAccessToken } from "@/lib/auth";
 import { api, type AuditLog } from "@/lib/api";
+
+const PAGE_SIZE = 25;
 
 const ACTION_LABELS: Record<string, string> = {
   login: "Giriş",
@@ -50,13 +53,17 @@ const ACTION_COLORS: Record<string, string> = {
 
 export default function AuditLogPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
 
-  const load = async () => {
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  const load = async (p: number) => {
     const token = getAccessToken();
     if (!token) return;
     setLoading(true);
@@ -65,18 +72,30 @@ export default function AuditLogPage() {
         action: actionFilter || undefined,
         status: statusFilter || undefined,
         search: search.trim() || undefined,
+        page: p,
+        pageSize: PAGE_SIZE,
       });
-      setLogs(data);
+      setLogs(data.results);
+      setTotal(data.count);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    const t = setTimeout(load, 300);
+    setPage(1);
+  }, [search, actionFilter, statusFilter]);
+
+  useEffect(() => {
+    const t = setTimeout(() => load(page), 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, actionFilter, statusFilter]);
+  }, [search, actionFilter, statusFilter, page]);
+
+  const handlePageChange = (p: number) => {
+    setPage(p);
+    setExpandedId(null);
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -198,6 +217,12 @@ export default function AuditLogPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="border-t border-slate-200/60 px-4 py-3 dark:border-slate-700/40">
+            <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+              <span className="text-xs text-slate-500">{total} kayıt · Sayfa {page}/{totalPages}</span>
+              <Pagination page={page} totalPages={totalPages} onPageChange={handlePageChange} />
+            </div>
           </div>
         </GlassCard>
       )}
