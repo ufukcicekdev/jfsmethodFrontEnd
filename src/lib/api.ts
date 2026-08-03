@@ -788,6 +788,105 @@ export interface Exercise {
   is_active: boolean;
 }
 
+export interface MealLog {
+  id: number;
+  meal_type: "breakfast" | "lunch" | "dinner" | "snack";
+  meal_type_label: string;
+  description: string;
+  photo_url: string | null;
+  logged_at: string;
+  admin_note: string;
+  admin_note_at: string | null;
+  created_at: string;
+}
+
+export interface PatientProgramItem {
+  id: number;
+  exercise_id: number;
+  exercise_title: string;
+  exercise_image: string | null;
+  sets: number;
+  reps: number | null;
+  duration_seconds: number | null;
+  rest_seconds: number;
+  note: string;
+  completed_today: boolean;
+}
+
+export interface PatientProgramDay {
+  id: number;
+  day_number: number;
+  title: string;
+  items: PatientProgramItem[];
+}
+
+export interface PatientProgram {
+  id: number;
+  name: string;
+  description: string;
+  program_type: "weekly" | "sequential";
+  difficulty: "easy" | "medium" | "hard";
+  duration_weeks: number;
+  days: PatientProgramDay[];
+}
+
+export interface ExerciseProgramItem {
+  id: number;
+  exercise: number;
+  exercise_title: string;
+  sets: number;
+  reps: number | null;
+  duration_seconds: number | null;
+  rest_seconds: number;
+  note: string;
+  sort_order: number;
+}
+
+export interface ExerciseProgramDay {
+  id: number;
+  day_number: number;
+  title: string;
+  sort_order: number;
+  items: ExerciseProgramItem[];
+}
+
+export interface ExerciseProgram {
+  id: number;
+  name: string;
+  description: string;
+  program_type: "weekly" | "sequential";
+  difficulty: "easy" | "medium" | "hard";
+  duration_weeks: number;
+  category: number | null;
+  is_active: boolean;
+  created_at: string;
+  days: ExerciseProgramDay[];
+}
+
+export interface ProductPackage {
+  id: number;
+  name: string;
+  description: string;
+  exercise_program: number | null;
+  exercise_program_name: string | null;
+  diet_program: number | null;
+  diet_program_name: string | null;
+  price: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface UserPackageAssignment {
+  id: number;
+  user: number;
+  user_name: string;
+  package: number;
+  package_name: string;
+  assigned_at: string;
+  is_active: boolean;
+  notes: string;
+}
+
 export interface ExerciseAssignment {
   id: number;
   exercise: Exercise;
@@ -1085,6 +1184,31 @@ export const api = {
           token,
         }),
     },
+
+    mealLogs: {
+      list: (token: string, date?: string) =>
+        apiFetch<MealLog[]>(`/wellness/meal-logs/${date ? `?date=${date}` : ""}`, { token }),
+      create: (token: string, data: { meal_type: string; description?: string; logged_at?: string; photo?: File }) => {
+        const fd = new FormData();
+        fd.append("meal_type", data.meal_type);
+        if (data.description) fd.append("description", data.description);
+        if (data.logged_at) fd.append("logged_at", data.logged_at);
+        if (data.photo) fd.append("photo", data.photo);
+        return apiUpload<MealLog>("/wellness/meal-logs/", fd, token);
+      },
+      delete: (token: string, id: number) =>
+        apiFetch<void>(`/wellness/meal-logs/${id}/`, { token, method: "DELETE" }),
+    },
+
+    myProgram: (token: string) =>
+      apiFetch<{ program: PatientProgram | null }>("/wellness/my-program/", { token }),
+
+    completeExerciseItem: (token: string, itemId: number, data?: { note?: string; difficulty_felt?: number }) =>
+      apiFetch<{ id: number; completed_at: string }>(`/wellness/my-program/items/${itemId}/complete/`, {
+        method: "POST",
+        body: JSON.stringify(data ?? {}),
+        token,
+      }),
   },
 
   admin: {
@@ -1446,6 +1570,21 @@ export const api = {
         `/wellness/patients/${id}/wellness-history/?days=${days}`, { token }
       ),
 
+    patientMealLogs: (token: string, patientId: number, date?: string) =>
+      apiFetch<(MealLog & { user_name: string })[]>(
+        `/wellness/patients/${patientId}/meal-logs/${date ? `?date=${date}` : ""}`, { token }
+      ),
+
+    addMealLogNote: (token: string, patientId: number, logId: number, note: string) =>
+      apiFetch<MealLog>(`/wellness/patients/${patientId}/meal-logs/${logId}/`, {
+        token, method: "PATCH", body: JSON.stringify({ admin_note: note }),
+      }),
+
+    patientProgramLogs: (token: string, patientId: number) =>
+      apiFetch<{ id: number; exercise_title: string; program_name: string; day_number: number; completed_at: string; difficulty_felt: number | null; note: string }[]>(
+        `/wellness/patients/${patientId}/program-logs/`, { token }
+      ),
+
     categoryTree: (token: string, type: "exercise" | "diet") =>
       apiFetch<Category[]>(`/admin/categories/?type=${type}`, { token }),
 
@@ -1457,6 +1596,62 @@ export const api = {
 
     deleteCategory: (token: string, id: number) =>
       apiFetch<void>(`/admin/categories/${id}/`, { token, method: "DELETE" }),
+
+    // Exercise Programs
+    exercisePrograms: (token: string) =>
+      apiFetch<ExerciseProgram[]>("/admin/exercise-programs/", { token }),
+
+    createExerciseProgram: (token: string, data: Partial<ExerciseProgram>) =>
+      apiFetch<ExerciseProgram>("/admin/exercise-programs/", { token, method: "POST", body: JSON.stringify(data) }),
+
+    updateExerciseProgram: (token: string, id: number, data: Partial<ExerciseProgram>) =>
+      apiFetch<ExerciseProgram>(`/admin/exercise-programs/${id}/`, { token, method: "PATCH", body: JSON.stringify(data) }),
+
+    deleteExerciseProgram: (token: string, id: number) =>
+      apiFetch<void>(`/admin/exercise-programs/${id}/`, { token, method: "DELETE" }),
+
+    createProgramDay: (token: string, programId: number, data: Partial<ExerciseProgramDay>) =>
+      apiFetch<ExerciseProgramDay>(`/admin/exercise-programs/${programId}/days/`, { token, method: "POST", body: JSON.stringify(data) }),
+
+    updateProgramDay: (token: string, dayId: number, data: Partial<ExerciseProgramDay>) =>
+      apiFetch<ExerciseProgramDay>(`/admin/program-days/${dayId}/`, { token, method: "PATCH", body: JSON.stringify(data) }),
+
+    deleteProgramDay: (token: string, dayId: number) =>
+      apiFetch<void>(`/admin/program-days/${dayId}/`, { token, method: "DELETE" }),
+
+    createProgramItem: (token: string, dayId: number, data: Partial<ExerciseProgramItem>) =>
+      apiFetch<ExerciseProgramItem>(`/admin/program-days/${dayId}/items/`, { token, method: "POST", body: JSON.stringify(data) }),
+
+    updateProgramItem: (token: string, itemId: number, data: Partial<ExerciseProgramItem>) =>
+      apiFetch<ExerciseProgramItem>(`/admin/program-items/${itemId}/`, { token, method: "PATCH", body: JSON.stringify(data) }),
+
+    deleteProgramItem: (token: string, itemId: number) =>
+      apiFetch<void>(`/admin/program-items/${itemId}/`, { token, method: "DELETE" }),
+
+    // Product Packages
+    productPackages: (token: string) =>
+      apiFetch<ProductPackage[]>("/admin/packages/", { token }),
+
+    createProductPackage: (token: string, data: Partial<ProductPackage>) =>
+      apiFetch<ProductPackage>("/admin/packages/", { token, method: "POST", body: JSON.stringify(data) }),
+
+    updateProductPackage: (token: string, id: number, data: Partial<ProductPackage>) =>
+      apiFetch<ProductPackage>(`/admin/packages/${id}/`, { token, method: "PATCH", body: JSON.stringify(data) }),
+
+    deleteProductPackage: (token: string, id: number) =>
+      apiFetch<void>(`/admin/packages/${id}/`, { token, method: "DELETE" }),
+
+    packageAssignments: (token: string) =>
+      apiFetch<UserPackageAssignment[]>("/admin/package-assignments/", { token }),
+
+    createPackageAssignment: (token: string, data: { user: number; package: number; notes?: string }) =>
+      apiFetch<UserPackageAssignment>("/admin/package-assignments/", { token, method: "POST", body: JSON.stringify(data) }),
+
+    updatePackageAssignment: (token: string, id: number, data: Partial<UserPackageAssignment>) =>
+      apiFetch<UserPackageAssignment>(`/admin/package-assignments/${id}/`, { token, method: "PATCH", body: JSON.stringify(data) }),
+
+    deletePackageAssignment: (token: string, id: number) =>
+      apiFetch<void>(`/admin/package-assignments/${id}/`, { token, method: "DELETE" }),
 
     exerciseLibrary: (token: string, categoryId?: number | null) =>
       apiFetch<Exercise[]>(`/admin/exercises/${categoryId ? `?category=${categoryId}` : ""}`, { token }),

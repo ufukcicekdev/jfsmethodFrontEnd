@@ -12,7 +12,7 @@ import { BodyMeasurementsSection } from "@/components/admin/BodyMeasurementsSect
 import { GlassCard } from "@/components/ui/GlassCard";
 import { FormField } from "@/components/ui/FormField";
 import { getAccessToken } from "@/lib/auth";
-import { api, type AdminPatient, type PatientProgressPhoto } from "@/lib/api";
+import { api, type AdminPatient, type PatientProgressPhoto, type MealLog } from "@/lib/api";
 import { calculateBMI, getBMICategory, getIdealWeightRange } from "@/lib/bmi";
 
 function DownloadReportButton({ patientId }: { patientId: number }) {
@@ -77,7 +77,7 @@ export default function StudentDetailPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [newWeight, setNewWeight] = useState("");
-  const [activeTab, setActiveTab] = useState<"profil" | "egzersizler" | "paketler" | "postur" | "olcumler" | "diyet" | "onboarding" | "aktivite">("profil");
+  const [activeTab, setActiveTab] = useState<"profil" | "egzersizler" | "paketler" | "postur" | "olcumler" | "diyet" | "onboarding" | "aktivite" | "ogunler">("profil");
   const [newPassword, setNewPassword] = useState("");
   const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
@@ -277,10 +277,11 @@ export default function StudentDetailPage() {
       )}
 
       <div className="flex flex-wrap gap-1 rounded-2xl border border-white/30 bg-white/40 p-1 backdrop-blur-md dark:border-slate-600/40 dark:bg-slate-900/40">
-        {(["profil", "aktivite", "egzersizler", "paketler", "postur", "olcumler", "diyet", "onboarding"] as const).map((tab) => {
+        {(["profil", "aktivite", "ogunler", "egzersizler", "paketler", "postur", "olcumler", "diyet", "onboarding"] as const).map((tab) => {
           const labels: Record<string, string> = {
             profil: "Profil",
             aktivite: "Aktivite",
+            ogunler: "Öğün Takibi",
             egzersizler: "Egzersizler",
             paketler: "Paketler",
             postur: "Postür & Fotoğraf",
@@ -434,6 +435,10 @@ export default function StudentDetailPage() {
         <PatientAktiviteTab patientId={id} />
       )}
 
+      {activeTab === "ogunler" && (
+        <PatientMealLogTab patientId={id} />
+      )}
+
       {activeTab === "onboarding" && (
         <PatientOnboardingTab patientId={id} completed={patient?.onboarding_completed ?? false} />
       )}
@@ -570,6 +575,183 @@ function PatientOnboardingTab({ patientId, completed }: { patientId: number; com
           </p>
         </GlassCard>
       ))}
+    </div>
+  );
+}
+
+const MEAL_TYPES = [
+  { value: "breakfast", label: "Kahvaltı", emoji: "🌅" },
+  { value: "lunch",     label: "Öğle",    emoji: "☀️" },
+  { value: "dinner",    label: "Akşam",   emoji: "🌙" },
+  { value: "snack",     label: "Ara Öğün",emoji: "🍎" },
+] as const;
+
+function todayISO2() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function PatientMealLogTab({ patientId }: { patientId: number }) {
+  const token = getAccessToken()!;
+  const [date, setDate] = useState(todayISO2());
+  const [logs, setLogs] = useState<(MealLog & { user_name?: string })[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [noteState, setNoteState] = useState<Record<number, string>>({});
+  const [savingNote, setSavingNote] = useState<number | null>(null);
+  const [openNoteId, setOpenNoteId] = useState<number | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await api.admin.patientMealLogs(token, patientId, date);
+      setLogs(data);
+      const notes: Record<number, string> = {};
+      for (const log of data) notes[log.id] = log.admin_note ?? "";
+      setNoteState(notes);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, [date]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSaveNote = async (logId: number) => {
+    setSavingNote(logId);
+    try {
+      await api.admin.addMealLogNote(token, patientId, logId, noteState[logId] ?? "");
+      setOpenNoteId(null);
+      await load();
+    } finally {
+      setSavingNote(null);
+    }
+  };
+
+  const byType: Record<string, typeof logs> = {};
+  for (const log of logs) {
+    if (!byType[log.meal_type]) byType[log.meal_type] = [];
+    byType[log.meal_type].push(log);
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Date nav */}
+      <div className="flex flex-wrap items-center gap-3">
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100" />
+        <button type="button" onClick={() => setDate(todayISO2())}
+          className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300">
+          Bugün
+        </button>
+        <button type="button"
+          onClick={() => { const d = new Date(date); d.setDate(d.getDate() - 1); setDate(d.toISOString().slice(0, 10)); }}
+          className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300">
+          ← Önceki
+        </button>
+        <button type="button"
+          onClick={() => { const d = new Date(date); d.setDate(d.getDate() + 1); setDate(d.toISOString().slice(0, 10)); }}
+          className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300">
+          Sonraki →
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="h-7 w-7 animate-spin rounded-full border-2 border-blue-200 border-t-blue-500" />
+        </div>
+      ) : logs.length === 0 ? (
+        <GlassCard>
+          <div className="py-10 text-center">
+            <p className="text-3xl">🍽️</p>
+            <p className="mt-3 text-sm text-slate-400">Bu tarih için öğün kaydı bulunamadı.</p>
+          </div>
+        </GlassCard>
+      ) : (
+        <div className="space-y-5">
+          {MEAL_TYPES.filter((mt) => byType[mt.value]?.length).map((mt) => (
+            <div key={mt.value}>
+              <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200">
+                <span>{mt.emoji}</span> {mt.label}
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 dark:bg-slate-800">{byType[mt.value].length} kayıt</span>
+              </h3>
+              <div className="space-y-3">
+                {byType[mt.value].map((log) => (
+                  <GlassCard key={log.id} className="p-4">
+                    <div className="flex gap-4">
+                      {/* Photo */}
+                      {log.photo_url && (
+                        <a href={log.photo_url} target="_blank" rel="noreferrer" className="shrink-0">
+                          <img src={log.photo_url} alt="Öğün fotoğrafı"
+                            className="h-28 w-28 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700 hover:opacity-90 transition-opacity" />
+                        </a>
+                      )}
+
+                      <div className="flex-1 min-w-0 space-y-2">
+                        {/* Time + description */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-xs font-semibold text-slate-400">
+                              {new Date(log.logged_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                            {log.description ? (
+                              <p className="mt-0.5 text-sm text-slate-800 dark:text-slate-100">{log.description}</p>
+                            ) : (
+                              <p className="mt-0.5 text-sm italic text-slate-400">Açıklama yok</p>
+                            )}
+                          </div>
+                          <button type="button"
+                            onClick={() => setOpenNoteId(openNoteId === log.id ? null : log.id)}
+                            className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${
+                              openNoteId === log.id
+                                ? "bg-blue-500 text-white"
+                                : log.admin_note
+                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                                : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                            }`}>
+                            {log.admin_note ? "✓ Not Var" : "Not Ekle"}
+                          </button>
+                        </div>
+
+                        {/* Existing admin note display */}
+                        {log.admin_note && openNoteId !== log.id && (
+                          <div className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+                            <span className="font-semibold">Notunuz:</span> {log.admin_note}
+                          </div>
+                        )}
+
+                        {/* Note editor */}
+                        {openNoteId === log.id && (
+                          <div className="space-y-2">
+                            <textarea
+                              rows={3}
+                              value={noteState[log.id] ?? ""}
+                              onChange={(e) => setNoteState((prev) => ({ ...prev, [log.id]: e.target.value }))}
+                              placeholder="Öğün hakkında not, öneri veya geri bildirim..."
+                              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/20"
+                            />
+                            <div className="flex gap-2">
+                              <button type="button"
+                                onClick={() => handleSaveNote(log.id)}
+                                disabled={savingNote === log.id}
+                                className="rounded-xl bg-blue-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-600 disabled:opacity-40">
+                                {savingNote === log.id ? "Kaydediliyor…" : "Kaydet"}
+                              </button>
+                              <button type="button"
+                                onClick={() => setOpenNoteId(null)}
+                                className="rounded-xl bg-slate-100 px-4 py-1.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                İptal
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </GlassCard>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

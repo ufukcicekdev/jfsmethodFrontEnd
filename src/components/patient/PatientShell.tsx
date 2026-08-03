@@ -16,6 +16,8 @@ const NAV_ITEMS = [
   { href: "/hesabim/paketler", label: "Paket / Randevu", exact: false },
   { href: "/hesabim/profil", label: "Profil & Kilo", exact: false },
   { href: "/hesabim/diyet", label: "Diyet Planım", exact: false },
+  { href: "/hesabim/programim", label: "Programım", exact: false },
+  { href: "/hesabim/ogunler", label: "Öğün Takibi", exact: false },
   { href: "/hesabim/egzersizlerim", label: "Egzersizlerim", exact: false },
   { href: "/hesabim/dijital-ikiz", label: "Tedavi İkizi", exact: false },
   { href: "/hesabim/fotograflarim", label: "Fotoğraflarım", exact: false },
