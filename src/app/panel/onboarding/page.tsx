@@ -218,6 +218,14 @@ export default function OnboardingAdminPage() {
   const [sections, setSections] = useState<OnboardingSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
+
+  const toggleSection = (id: number) =>
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   const load = useCallback(async () => {
     const token = getAccessToken();
@@ -304,140 +312,139 @@ export default function OnboardingAdminPage() {
           <p className="text-slate-500 dark:text-slate-400">Henüz bölüm yok. "Yeni Bölüm" ekleyin.</p>
         </GlassCard>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-3">
           {sections.map((s) => {
+            const isExpanded = expandedSections.has(s.id);
             const editSectionKey = `edit-section-${s.id}`;
             const newQKey = `new-q-${s.id}`;
 
             return (
-              <div key={s.id}>
-                {/* ── Section header ── */}
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3 dark:border-slate-700">
-                  {openId === editSectionKey ? (
-                    <div className="w-full">
-                      <SectionForm
-                        initial={{ title: s.title, description: s.description, sort_order: s.sort_order }}
-                        onSave={(data) => handleSaveSection(s.id, data)}
-                        onCancel={() => setOpenId(null)}
-                      />
+              <GlassCard key={s.id} className="overflow-hidden p-0">
+                {/* ── Section header (accordion trigger) ── */}
+                <div className="flex items-center gap-3 px-5 py-4">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(s.id)}
+                    className="flex flex-1 items-center gap-3 text-left"
+                  >
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm text-blue-600 dark:bg-blue-900/40 dark:text-blue-300">
+                      {isExpanded ? "▾" : "▸"}
+                    </span>
+                    <div>
+                      <span className="font-semibold text-slate-900 dark:text-slate-50">{s.title}</span>
+                      {s.description && (
+                        <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">{s.description}</span>
+                      )}
                     </div>
-                  ) : (
-                    <>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h2 className="text-base font-bold text-slate-900 dark:text-slate-50">{s.title}</h2>
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                            {s.questions.length} soru
-                          </span>
-                        </div>
-                        {s.description && <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{s.description}</p>}
-                      </div>
-                      <div className="flex shrink-0 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setOpenId(openId === newQKey ? null : newQKey)}
-                          className="rounded-full border border-emerald-400/60 px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
-                        >
-                          + Soru Ekle
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setOpenId(openId === editSectionKey ? null : editSectionKey)}
-                          className="rounded-full border border-slate-300/60 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-600/60 dark:text-slate-300"
-                        >
-                          Düzenle
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteSection(s)}
-                          className="rounded-full border border-red-300/60 px-3 py-1.5 text-xs font-semibold text-red-500 hover:bg-red-50 dark:border-red-700/40 dark:text-red-400"
-                        >
-                          Sil
-                        </button>
-                      </div>
-                    </>
-                  )}
+                    <span className="ml-2 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                      {s.questions.length} soru
+                    </span>
+                  </button>
+
+                  {/* Action buttons — always visible */}
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => { if (!isExpanded) toggleSection(s.id); setOpenId(openId === newQKey ? null : newQKey); }}
+                      className="rounded-full border border-emerald-400/60 px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+                    >
+                      + Soru
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { if (!isExpanded) toggleSection(s.id); setOpenId(openId === editSectionKey ? null : editSectionKey); }}
+                      className="rounded-full border border-slate-300/60 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-600/60 dark:text-slate-300"
+                    >
+                      Düzenle
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSection(s)}
+                      className="rounded-full border border-red-300/60 px-3 py-1.5 text-xs font-semibold text-red-500 hover:bg-red-50 dark:border-red-700/40 dark:text-red-400"
+                    >
+                      Sil
+                    </button>
+                  </div>
                 </div>
 
-                {/* ── New question form ── */}
-                {openId === newQKey && (
-                  <div className="mb-3">
-                    <QuestionForm
-                      initial={{ ...EMPTY_QUESTION, sort_order: s.questions.length, section: s.id }}
-                      onSave={(data) => handleSaveQuestion(null, data)}
-                      onCancel={() => setOpenId(null)}
-                    />
-                  </div>
-                )}
+                {/* ── Expanded content ── */}
+                {isExpanded && (
+                  <div className="border-t border-slate-100 px-5 pb-4 pt-3 dark:border-slate-800">
 
-                {/* ── Questions list ── */}
-                {s.questions.length === 0 ? (
-                  <p className="text-sm italic text-slate-400 dark:text-slate-500">Bu bölümde henüz soru yok.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {s.questions.map((q) => {
-                      const qKey = `q-${q.id}`;
-                      const isEditingQ = openId === qKey;
-                      return (
-                        <div key={q.id}>
-                          {/* Question row */}
-                          <div className={`flex flex-wrap items-start gap-3 rounded-xl px-4 py-3 transition-colors ${isEditingQ ? "bg-slate-100 dark:bg-slate-800/60" : "hover:bg-slate-50 dark:hover:bg-slate-800/30"}`}>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 mb-1">
-                                <span className="text-[10px] font-bold text-slate-400">#{q.sort_order}</span>
-                                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${TYPE_COLORS[q.question_type]}`}>
-                                  {TYPE_LABELS[q.question_type]}
-                                </span>
-                                {q.is_required && (
-                                  <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-600 dark:bg-red-900/30 dark:text-red-400">Zorunlu</span>
-                                )}
-                                {!q.is_active && (
-                                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-700">Pasif</span>
-                                )}
+                    {/* Section edit form */}
+                    {openId === editSectionKey && (
+                      <div className="mb-4 rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50">
+                        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Bölümü Düzenle</p>
+                        <SectionForm
+                          initial={{ title: s.title, description: s.description, sort_order: s.sort_order }}
+                          onSave={(data) => handleSaveSection(s.id, data)}
+                          onCancel={() => setOpenId(null)}
+                        />
+                      </div>
+                    )}
+
+                    {/* New question form */}
+                    {openId === newQKey && (
+                      <div className="mb-3">
+                        <QuestionForm
+                          initial={{ ...EMPTY_QUESTION, sort_order: s.questions.length, section: s.id }}
+                          onSave={(data) => handleSaveQuestion(null, data)}
+                          onCancel={() => setOpenId(null)}
+                        />
+                      </div>
+                    )}
+
+                    {/* Questions */}
+                    {s.questions.length === 0 && openId !== newQKey ? (
+                      <p className="text-sm italic text-slate-400 dark:text-slate-500">Bu bölümde henüz soru yok.</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {s.questions.map((q) => {
+                          const qKey = `q-${q.id}`;
+                          const isEditingQ = openId === qKey;
+                          return (
+                            <div key={q.id}>
+                              <div className={`flex flex-wrap items-start gap-3 rounded-xl px-3 py-3 transition-colors ${isEditingQ ? "bg-slate-100 dark:bg-slate-800/60" : "hover:bg-slate-50 dark:hover:bg-slate-800/30"}`}>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                                    <span className="text-[10px] font-bold text-slate-400">#{q.sort_order}</span>
+                                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${TYPE_COLORS[q.question_type]}`}>{TYPE_LABELS[q.question_type]}</span>
+                                    {q.is_required && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-600 dark:bg-red-900/30 dark:text-red-400">Zorunlu</span>}
+                                    {!q.is_active && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-700">Pasif</span>}
+                                  </div>
+                                  <p className="text-sm text-slate-800 dark:text-slate-100">{q.text}</p>
+                                  {q.options.length > 0 && (
+                                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                      {q.options.map((opt, i) => (
+                                        <span key={i} className="rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-400">{opt}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex shrink-0 gap-1.5">
+                                  <button type="button" onClick={() => setOpenId(isEditingQ ? null : qKey)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${isEditingQ ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"}`}>
+                                    {isEditingQ ? "Kapat" : "Düzenle"}
+                                  </button>
+                                  <button type="button" onClick={() => handleDeleteQuestion(q)} className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400">Sil</button>
+                                </div>
                               </div>
-                              <p className="text-sm text-slate-800 dark:text-slate-100">{q.text}</p>
-                              {q.options.length > 0 && (
-                                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                                  {q.options.map((opt, i) => (
-                                    <span key={i} className="rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-400">{opt}</span>
-                                  ))}
+                              {isEditingQ && (
+                                <div className="mt-1 mb-2">
+                                  <QuestionForm
+                                    initial={{ text: q.text, question_type: q.question_type, options: [...q.options], is_required: q.is_required, sort_order: q.sort_order, is_active: q.is_active ?? true, section: s.id }}
+                                    onSave={(data) => handleSaveQuestion(q.id, data)}
+                                    onCancel={() => setOpenId(null)}
+                                  />
                                 </div>
                               )}
                             </div>
-                            <div className="flex shrink-0 gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setOpenId(isEditingQ ? null : qKey)}
-                                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${isEditingQ ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"}`}
-                              >
-                                {isEditingQ ? "Kapat" : "Düzenle"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteQuestion(q)}
-                                className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400"
-                              >
-                                Sil
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Inline edit form */}
-                          {isEditingQ && (
-                            <div className="mt-1 mb-2">
-                              <QuestionForm
-                                initial={{ text: q.text, question_type: q.question_type, options: [...q.options], is_required: q.is_required, sort_order: q.sort_order, is_active: q.is_active ?? true, section: s.id }}
-                                onSave={(data) => handleSaveQuestion(q.id, data)}
-                                onCancel={() => setOpenId(null)}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
+              </GlassCard>
             );
           })}
         </div>
