@@ -633,6 +633,7 @@ function PackageForm({
   const [form, setForm] = useState({
     name: initial?.name ?? "",
     description: initial?.description ?? "",
+    session_type: (initial?.session_type ?? "group") as "group" | "private",
     exercise_program: initial?.exercise_program ?? (null as number | null),
     diet_program: initial?.diet_program ?? (null as number | null),
     price: initial?.price ?? "",
@@ -658,6 +659,17 @@ function PackageForm({
           <label className="mb-1 block text-xs font-semibold text-slate-500">Açıklama</label>
           <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2}
             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-slate-500">Ders Türü</label>
+          <CustomSelect
+            value={form.session_type}
+            onChange={(v) => setForm((f) => ({ ...f, session_type: v as "group" | "private" }))}
+            options={[
+              { value: "group", label: "🧑‍🤝‍🧑 Grup Dersi" },
+              { value: "private", label: "👤 Özel Ders" },
+            ]}
+          />
         </div>
         <div>
           <label className="mb-1 block text-xs font-semibold text-slate-500">Egzersiz Programı</label>
@@ -1127,6 +1139,9 @@ export default function ProgramlarPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-slate-900 dark:text-slate-50">{pkg.name}</span>
                         {pkg.price && <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">₺{pkg.price}</Badge>}
+                        <Badge className={pkg.session_type === "private" ? "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300" : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"}>
+                          {pkg.session_type === "private" ? "👤 Özel Ders" : "🧑‍🤝‍🧑 Grup"}
+                        </Badge>
                         {!pkg.is_active && <Badge className="bg-slate-100 text-slate-500 dark:bg-slate-700">Pasif</Badge>}
                       </div>
                       {pkg.description && <p className="mt-1 text-sm text-slate-500">{pkg.description}</p>}

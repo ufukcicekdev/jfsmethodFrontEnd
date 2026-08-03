@@ -12,6 +12,7 @@ import {
   type Appointment,
   type PackagePlan,
   type PatientAttendance,
+  type ProductPackage,
   type SessionPackage,
 } from "@/lib/api";
 
@@ -201,7 +202,8 @@ export function PatientPackageSection({
   const [localHistory, setLocalHistory] = useState(attendance?.history ?? []);
   const [updatingApptId, setUpdatingApptId] = useState<number | null>(null);
   const [plans, setPlans] = useState<PackagePlan[]>([]);
-  const [form, setForm] = useState({ plan_id: 0, is_paid: false });
+  const [productPackages, setProductPackages] = useState<ProductPackage[]>([]);
+  const [form, setForm] = useState({ plan_id: 0, product_package_id: 0, is_paid: false });
   // per-package attendance date state: pkgId -> date string
   const [pkgAttendanceDates, setPkgAttendanceDates] = useState<Record<number, string>>({});
   const [pkgAttendanceBusy, setPkgAttendanceBusy] = useState<number | null>(null);
@@ -218,6 +220,10 @@ export function PatientPackageSection({
       .packagePlans(token)
       .then((data) => setPlans(data.filter((p) => p.is_active)))
       .catch(() => setPlans([]));
+    api.admin
+      .productPackages(token)
+      .then((data: ProductPackage[]) => setProductPackages(data.filter((p) => p.is_active)))
+      .catch(() => setProductPackages([]));
   }, []);
 
   const handleMarkAttendance = async (apptId: number, status: Appointment["status"]) => {
@@ -251,10 +257,11 @@ export function PatientPackageSection({
     try {
       await api.admin.createPackage(token, patientId, {
         plan_id: form.plan_id,
+        product_package: form.product_package_id || null,
         purchased_at: todayIso,
         is_paid: form.is_paid,
       });
-      setForm({ plan_id: 0, is_paid: false });
+      setForm({ plan_id: 0, product_package_id: 0, is_paid: false });
       onMessage("Paket atandı.", "success");
       onChanged();
     } catch (err) {
@@ -586,6 +593,24 @@ export function PatientPackageSection({
                 aria-label="Paket planı"
               />
             </FormGroup>
+
+            {productPackages.length > 0 && (
+              <FormGroup label="Ürün Paketi (Grup / Özel Ders)">
+                <CustomSelect
+                  value={form.product_package_id}
+                  onChange={(value) => setForm((f) => ({ ...f, product_package_id: Number(value) }))}
+                  className="w-full"
+                  options={[
+                    { value: 0, label: "— Seçmek istemiyorum —" },
+                    ...productPackages.map((p) => ({
+                      value: p.id,
+                      label: `${p.session_type === "private" ? "👤 Özel" : "🧑‍🤝‍🧑 Grup"} · ${p.name}`,
+                    })),
+                  ]}
+                  aria-label="Ürün paketi"
+                />
+              </FormGroup>
+            )}
 
             <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
               <input

@@ -212,6 +212,8 @@ export interface SessionPackage {
   no_show_count: number;
   scheduled_count: number;
   remaining_sessions: number;
+  product_package: number | null;
+  product_package_name: string | null;
   created_by_name: string | null;
   created_at: string;
 }
@@ -898,6 +900,7 @@ export interface ProductPackage {
   id: number;
   name: string;
   description: string;
+  session_type: "group" | "private";
   exercise_program: number | null;
   exercise_program_name: string | null;
   diet_program: number | null;
@@ -1292,6 +1295,7 @@ export const api = {
       patientId: number,
       data: {
         plan_id?: number;
+        product_package?: number | null;
         name?: string;
         total_sessions?: number;
         used_sessions?: number;
