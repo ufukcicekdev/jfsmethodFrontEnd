@@ -258,12 +258,22 @@ export interface AuthUser {
 
 export interface OnboardingQuestion {
   id: number;
+  section: number | null;
   text: string;
   question_type: "text" | "choice" | "scale" | "multi";
   options: string[];
   is_required: boolean;
   sort_order: number;
   is_active?: boolean;
+}
+
+export interface OnboardingSection {
+  id: number;
+  title: string;
+  description: string;
+  sort_order: number;
+  is_active: boolean;
+  questions: OnboardingQuestion[];
 }
 
 export interface OnboardingAnswer {
@@ -824,7 +834,8 @@ export interface WellnessDashboard {
 
 export const api = {
   onboarding: {
-    questions: (token: string) => apiFetch<OnboardingQuestion[]>("/onboarding/questions/", { token }),
+    questions: (token: string) =>
+      apiFetch<{ sections: OnboardingSection[]; unassigned_questions: OnboardingQuestion[] }>("/onboarding/questions/", { token }),
     submit: (token: string, answers: { question_id: number; answer: unknown }[]) =>
       apiFetch<{ completed: boolean }>("/onboarding/submit/", { token, method: "POST", body: JSON.stringify({ answers }) }),
   },
@@ -1815,6 +1826,13 @@ export const api = {
       whyUs: { list: (t: string) => apiFetch<LandingWhyUsItem[]>("/admin/landing/why-us/", { token: t }), create: (t: string, d: Partial<LandingWhyUsItem>) => apiFetch<LandingWhyUsItem>("/admin/landing/why-us/", { token: t, method: "POST", body: JSON.stringify(d) }), update: (t: string, id: number, d: Partial<LandingWhyUsItem>) => apiFetch<LandingWhyUsItem>(`/admin/landing/why-us/${id}/`, { token: t, method: "PUT", body: JSON.stringify(d) }), delete: (t: string, id: number) => fetch(`${API_BASE}/admin/landing/why-us/${id}/`, { method: "DELETE", headers: { Authorization: `Bearer ${t}` } }).then(r => { if (!r.ok) throw new Error(); }) },
     },
     onboarding: {
+      sections: (token: string) => apiFetch<OnboardingSection[]>("/admin/onboarding/sections/", { token }),
+      createSection: (token: string, d: { title: string; description?: string; sort_order?: number }) =>
+        apiFetch<OnboardingSection>("/admin/onboarding/sections/", { token, method: "POST", body: JSON.stringify(d) }),
+      updateSection: (token: string, id: number, d: Partial<OnboardingSection>) =>
+        apiFetch<OnboardingSection>(`/admin/onboarding/sections/${id}/`, { token, method: "PATCH", body: JSON.stringify(d) }),
+      deleteSection: (token: string, id: number) =>
+        fetch(`${API_BASE}/admin/onboarding/sections/${id}/`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }).then(r => { if (!r.ok) throw new Error(); }),
       list: (token: string) => apiFetch<OnboardingQuestion[]>("/admin/onboarding/questions/", { token }),
       create: (token: string, d: Partial<OnboardingQuestion>) => apiFetch<OnboardingQuestion>("/admin/onboarding/questions/", { token, method: "POST", body: JSON.stringify(d) }),
       update: (token: string, id: number, d: Partial<OnboardingQuestion>) => apiFetch<OnboardingQuestion>(`/admin/onboarding/questions/${id}/`, { token, method: "PUT", body: JSON.stringify(d) }),

@@ -8,7 +8,8 @@ import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import { PatientNotificationBell } from "@/components/patient/PatientNotificationBell";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { DarkModeToggle } from "@/components/ui/DarkModeToggle";
-import { isStaffUser } from "@/lib/auth";
+import { isStaffUser, getAccessToken } from "@/lib/auth";
+import { api } from "@/lib/api";
 
 const NAV_ITEMS = [
   { href: "/hesabim", label: "Genel Bakış", exact: true },
@@ -138,6 +139,8 @@ export function PatientShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { user, loading, logout, refreshUser } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // null = checking, true = has unanswered questions, false = all answered
+  const [hasOnboarding, setHasOnboarding] = useState<boolean | null>(null);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -160,7 +163,17 @@ export function PatientShell({ children }: { children: ReactNode }) {
     }
     if (isStaffUser(user)) {
       router.replace("/panel");
+      return;
     }
+    // Check for unanswered onboarding questions
+    const token = getAccessToken();
+    if (!token) return;
+    api.onboarding.questions(token).then(({ sections, unassigned_questions }) => {
+      const totalUnanswered =
+        sections.reduce((sum, s) => sum + s.questions.length, 0) +
+        unassigned_questions.length;
+      setHasOnboarding(totalUnanswered > 0);
+    }).catch(() => setHasOnboarding(false));
   }, [user, loading, router]);
 
   const handleLogout = () => {
@@ -168,7 +181,7 @@ export function PatientShell({ children }: { children: ReactNode }) {
     router.push("/login");
   };
 
-  if (loading || !user || isStaffUser(user)) {
+  if (loading || !user || isStaffUser(user) || hasOnboarding === null) {
     return (
       <>
         <FluidBackground />
@@ -177,11 +190,11 @@ export function PatientShell({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!user.onboarding_completed) {
+  if (hasOnboarding) {
     return (
       <>
         <FluidBackground />
-        <OnboardingFlow onComplete={refreshUser} />
+        <OnboardingFlow onComplete={() => setHasOnboarding(false)} />
       </>
     );
   }

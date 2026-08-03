@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { api, type OnboardingQuestion } from "@/lib/api";
+import { api, type OnboardingQuestion, type OnboardingSection } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 
 interface Props {
@@ -10,8 +10,13 @@ interface Props {
 
 type AnswerValue = string | string[] | number;
 
+// Flat step: either a "section-intro" or a "question"
+type Step =
+  | { kind: "intro"; section: OnboardingSection }
+  | { kind: "question"; question: OnboardingQuestion; sectionTitle: string; sectionIndex: number; totalSections: number };
+
 export function OnboardingFlow({ onComplete }: Props) {
-  const [questions, setQuestions] = useState<OnboardingQuestion[]>([]);
+  const [steps, setSteps] = useState<Step[]>([]);
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<Record<number, AnswerValue>>({});
@@ -24,18 +29,32 @@ export function OnboardingFlow({ onComplete }: Props) {
     const token = getAccessToken();
     if (!token) return;
     api.onboarding.questions(token)
-      .then((qs) => {
-        setQuestions(qs);
+      .then(({ sections, unassigned_questions }) => {
+        const built: Step[] = [];
+        const totalSections = sections.length;
+
+        sections.forEach((section, sIdx) => {
+          const activeQs = section.questions.filter((q) => q.is_active !== false);
+          if (activeQs.length === 0) return;
+          built.push({ kind: "intro", section });
+          activeQs.forEach((q) => {
+            built.push({ kind: "question", question: q, sectionTitle: section.title, sectionIndex: sIdx + 1, totalSections });
+          });
+        });
+
+        // Unassigned questions (no section) go as a plain flow without intro
+        unassigned_questions.filter((q) => q.is_active !== false).forEach((q) => {
+          built.push({ kind: "question", question: q, sectionTitle: "", sectionIndex: 0, totalSections });
+        });
+
+        setSteps(built);
         setLoading(false);
       })
-      .catch(() => {
-        setLoading(false);
-      });
+      .catch(() => setLoading(false));
   }, []);
 
-  const question = questions[current];
-  const total = questions.length;
-  const answer = question ? answers[question.id] : undefined;
+  const step = steps[current];
+  const totalSteps = steps.length;
 
   const navigate = useCallback((dir: "forward" | "back") => {
     setDirection(dir);
@@ -47,13 +66,19 @@ export function OnboardingFlow({ onComplete }: Props) {
   }, []);
 
   const canNext = () => {
-    if (!question) return false;
-    if (!question.is_required) return true;
-    const a = answers[question.id];
+    if (!step) return false;
+    if (step.kind === "intro") return true;
+    const q = step.question;
+    if (!q.is_required) return true;
+    const a = answers[q.id];
     if (a === undefined || a === null || a === "") return false;
     if (Array.isArray(a) && a.length === 0) return false;
     return true;
   };
+
+  const allQuestions = steps
+    .filter((s): s is Extract<Step, { kind: "question" }> => s.kind === "question")
+    .map((s) => s.question);
 
   const handleSubmit = async () => {
     const token = getAccessToken();
@@ -63,10 +88,7 @@ export function OnboardingFlow({ onComplete }: Props) {
     try {
       await api.onboarding.submit(
         token,
-        questions.map((q) => ({
-          question_id: q.id,
-          answer: answers[q.id] ?? "",
-        }))
+        allQuestions.map((q) => ({ question_id: q.id, answer: answers[q.id] ?? "" }))
       );
       onComplete();
     } catch {
@@ -76,9 +98,13 @@ export function OnboardingFlow({ onComplete }: Props) {
   };
 
   const setAnswer = (val: AnswerValue) => {
-    if (!question) return;
-    setAnswers((prev) => ({ ...prev, [question.id]: val }));
+    if (!step || step.kind !== "question") return;
+    setAnswers((prev) => ({ ...prev, [step.question.id]: val }));
   };
+
+  // Progress: count how many question-steps done
+  const questionStepsBefore = steps.slice(0, current + 1).filter((s) => s.kind === "question").length;
+  const totalQuestionSteps = steps.filter((s) => s.kind === "question").length;
 
   if (loading) {
     return (
@@ -88,141 +114,159 @@ export function OnboardingFlow({ onComplete }: Props) {
     );
   }
 
-  if (total === 0) {
-    return null;
-  }
+  if (totalSteps === 0) return null;
+
+  const isLast = current === totalSteps - 1;
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-white dark:bg-slate-900">
+      {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
         <div className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-          Hoş Geldiniz
+          {step?.kind === "question" && step.sectionTitle ? step.sectionTitle : "Hoş Geldiniz"}
         </div>
-        <div className="text-sm text-slate-500 dark:text-slate-400">
-          {current + 1} / {total}
-        </div>
+        {totalQuestionSteps > 0 && (
+          <div className="text-sm text-slate-500 dark:text-slate-400">
+            {Math.min(questionStepsBefore, totalQuestionSteps)} / {totalQuestionSteps}
+          </div>
+        )}
       </div>
 
+      {/* Progress bar */}
       <div className="h-1 bg-slate-100 dark:bg-slate-800">
         <div
           className="h-full bg-blue-500 transition-all duration-500"
-          style={{ width: `${((current + 1) / total) * 100}%` }}
+          style={{ width: totalQuestionSteps > 0 ? `${(questionStepsBefore / totalQuestionSteps) * 100}%` : "0%" }}
         />
       </div>
 
+      {/* Content */}
       <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-6 py-10">
         <div
           className={`w-full max-w-xl transition-all duration-200 ${
             animating
-              ? direction === "forward"
-                ? "translate-x-6 opacity-0"
-                : "-translate-x-6 opacity-0"
+              ? direction === "forward" ? "translate-x-6 opacity-0" : "-translate-x-6 opacity-0"
               : "translate-x-0 opacity-100"
           }`}
         >
-          {question && (
-            <div className="space-y-6">
-              <div>
+          {/* Section intro */}
+          {step?.kind === "intro" && (
+            <div className="space-y-4 text-center">
+              {steps.filter((s) => s.kind === "intro").length > 1 && (
                 <p className="text-xs font-semibold uppercase tracking-wider text-blue-500">
-                  Soru {current + 1}
+                  Bölüm {step.section.sort_order + 1}
                 </p>
-                <h2 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-50">
-                  {question.text}
-                  {question.is_required && (
-                    <span className="ml-1 text-red-500">*</span>
-                  )}
-                </h2>
-              </div>
-
-              {question.question_type === "text" && (
-                <textarea
-                  rows={4}
-                  value={(answer as string) ?? ""}
-                  onChange={(e) => setAnswer(e.target.value)}
-                  placeholder="Cevabınızı yazın..."
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500"
-                />
               )}
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
+                {step.section.title}
+              </h2>
+              {step.section.description && (
+                <p className="text-sm text-slate-500 dark:text-slate-400">{step.section.description}</p>
+              )}
+              <p className="text-sm text-slate-400">
+                {step.section.questions.filter((q) => q.is_active !== false).length} soru
+              </p>
+            </div>
+          )}
 
-              {question.question_type === "choice" && (
-                <div className="space-y-3">
-                  {question.options.map((opt) => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setAnswer(opt)}
-                      className={`w-full rounded-2xl border-2 px-5 py-4 text-left text-sm font-medium transition-all ${
-                        answer === opt
-                          ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  ))}
+          {/* Question */}
+          {step?.kind === "question" && (() => {
+            const question = step.question;
+            const answer = answers[question.id];
+            return (
+              <div className="space-y-6">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-blue-500">
+                    {step.sectionTitle || "Soru"}
+                  </p>
+                  <h2 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-50">
+                    {question.text}
+                    {question.is_required && <span className="ml-1 text-red-500">*</span>}
+                  </h2>
                 </div>
-              )}
 
-              {question.question_type === "multi" && (
-                <div className="space-y-3">
-                  {question.options.map((opt) => {
-                    const selected = Array.isArray(answer) && answer.includes(opt);
-                    return (
+                {question.question_type === "text" && (
+                  <textarea
+                    rows={4}
+                    value={(answer as string) ?? ""}
+                    onChange={(e) => setAnswer(e.target.value)}
+                    placeholder="Cevabınızı yazın..."
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500"
+                  />
+                )}
+
+                {question.question_type === "choice" && (
+                  <div className="space-y-3">
+                    {question.options.map((opt) => (
                       <button
                         key={opt}
                         type="button"
-                        onClick={() => {
-                          const prev = Array.isArray(answer) ? [...answer] : [];
-                          setAnswer(
-                            selected ? prev.filter((v) => v !== opt) : [...prev, opt]
-                          );
-                        }}
-                        className={`flex w-full items-center gap-3 rounded-2xl border-2 px-5 py-4 text-left text-sm font-medium transition-all ${
-                          selected
+                        onClick={() => setAnswer(opt)}
+                        className={`w-full rounded-2xl border-2 px-5 py-4 text-left text-sm font-medium transition-all ${
+                          answer === opt
                             ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
                             : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                         }`}
                       >
-                        <span
-                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${
-                            selected
-                              ? "border-blue-500 bg-blue-500"
-                              : "border-slate-300 dark:border-slate-600"
-                          }`}
-                        >
-                          {selected && (
-                            <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
-                        </span>
                         {opt}
                       </button>
-                    );
-                  })}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
 
-              {question.question_type === "scale" && (
-                <div className="flex flex-wrap gap-2">
-                  {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setAnswer(n)}
-                      className={`h-12 w-12 rounded-xl border-2 text-sm font-bold transition-all ${
-                        answer === n
-                          ? "border-blue-500 bg-blue-500 text-white shadow-md"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-blue-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                      }`}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                {question.question_type === "multi" && (
+                  <div className="space-y-3">
+                    {question.options.map((opt) => {
+                      const selected = Array.isArray(answer) && answer.includes(opt);
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => {
+                            const prev = Array.isArray(answer) ? [...answer] : [];
+                            setAnswer(selected ? prev.filter((v) => v !== opt) : [...prev, opt]);
+                          }}
+                          className={`flex w-full items-center gap-3 rounded-2xl border-2 px-5 py-4 text-left text-sm font-medium transition-all ${
+                            selected
+                              ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                              : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                          }`}
+                        >
+                          <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${selected ? "border-blue-500 bg-blue-500" : "border-slate-300 dark:border-slate-600"}`}>
+                            {selected && (
+                              <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </span>
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {question.question_type === "scale" && (
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setAnswer(n)}
+                        className={`h-12 w-12 rounded-xl border-2 text-sm font-bold transition-all ${
+                          answer === n
+                            ? "border-blue-500 bg-blue-500 text-white shadow-md"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-blue-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -232,6 +276,7 @@ export function OnboardingFlow({ onComplete }: Props) {
         </div>
       )}
 
+      {/* Navigation */}
       <div className="flex items-center justify-between border-t border-slate-100 px-6 py-5 dark:border-slate-800">
         <button
           type="button"
@@ -242,14 +287,14 @@ export function OnboardingFlow({ onComplete }: Props) {
           Geri
         </button>
 
-        {current < total - 1 ? (
+        {!isLast ? (
           <button
             type="button"
             onClick={() => navigate("forward")}
             disabled={!canNext()}
             className="rounded-full bg-blue-500 px-8 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-40"
           >
-            İleri
+            {step?.kind === "intro" ? "Başla" : "İleri"}
           </button>
         ) : (
           <button
