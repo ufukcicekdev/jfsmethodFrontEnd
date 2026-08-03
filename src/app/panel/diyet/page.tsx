@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { CategoryTree } from "@/components/ui/CategoryTree";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { getAccessToken } from "@/lib/auth";
-import { api, type DietItem, type DietProgram } from "@/lib/api";
+import { api, type Category, type DietItem, type DietProgram } from "@/lib/api";
 
 /* ========================================================
    MEAL TYPES
@@ -157,6 +158,31 @@ export default function DiyetPage() {
 /* ========================================================
    PROGRAMS TAB
    ======================================================== */
+function CategoryDialog({ onClose, onSave, initial }: { onClose: () => void; onSave: (name: string) => Promise<void>; initial: string }) {
+  const [name, setName] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    try { await onSave(name.trim()); onClose(); } finally { setSaving(false); }
+  };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-800" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{initial ? "Kategoriyi Yeniden Adlandır" : "Yeni Kategori"}</h3>
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Kategori adı" className="w-full rounded-xl border border-slate-200/90 bg-white/80 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/25 dark:border-slate-600/60 dark:bg-slate-700/80 dark:text-slate-100" />
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={onClose} className="rounded-full border border-slate-300/60 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300">İptal</button>
+            <button type="submit" disabled={saving || !name.trim()} className="rounded-full bg-blue-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Kaydediliyor…" : "Kaydet"}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function ProgramsTab({ notify }: { notify: (t: string, ok?: boolean) => void }) {
   const confirm = useConfirm();
   const [programs, setPrograms] = useState<DietProgram[]>([]);
@@ -170,13 +196,24 @@ function ProgramsTab({ notify }: { notify: (t: string, ok?: boolean) => void }) 
   const [draft, setDraft] = useState<DraftProgram>(emptyProgram());
   const [activeDayKey, setActiveDayKey] = useState("");
 
-  const load = async () => {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [catDialog, setCatDialog] = useState<{ mode: "add-root" | "add-child" | "rename"; parentId?: number; cat?: Category } | null>(null);
+  const [draftCategoryId, setDraftCategoryId] = useState<number | null>(null);
+
+  const loadCategories = () => {
+    const token = getAccessToken();
+    if (!token) return;
+    api.admin.categoryTree(token, "diet").then(setCategories).catch(() => {});
+  };
+
+  const load = async (catId?: number | null) => {
     const token = getAccessToken();
     if (!token) return;
     setLoading(true);
     try {
       const [progs, items] = await Promise.all([
-        api.admin.dietPrograms.list(token),
+        api.admin.dietPrograms.list(token, catId),
         api.admin.dietItems.list(token),
       ]);
       setPrograms(progs);
@@ -184,16 +221,37 @@ function ProgramsTab({ notify }: { notify: (t: string, ok?: boolean) => void }) 
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadCategories(); }, []);
+  useEffect(() => { load(selectedCategoryId); }, [selectedCategoryId]);
+
+  const flattenCategories = (nodes: Category[], prefix = ""): { value: string; label: string }[] => {
+    const result: { value: string; label: string }[] = [];
+    for (const n of nodes) {
+      result.push({ value: String(n.id), label: prefix + n.name });
+      result.push(...flattenCategories(n.children, prefix + "  "));
+    }
+    return result;
+  };
+  const categoryOptions = [{ value: "", label: "Kategorisiz" }, ...flattenCategories(categories)];
+  const findCatName = (nodes: Category[], id: number): string | null => {
+    for (const n of nodes) {
+      if (n.id === id) return n.name;
+      const r = findCatName(n.children, id);
+      if (r) return r;
+    }
+    return null;
+  };
 
   const openCreate = () => {
     const d = emptyProgram(7);
-    setDraft(d); setActiveDayKey(d.days[0]._key); setEditingId(null); setMode("create");
+    setDraft(d); setActiveDayKey(d.days[0]._key); setEditingId(null);
+    setDraftCategoryId(selectedCategoryId); setMode("create");
   };
 
   const openEdit = (prog: DietProgram) => {
     const d = programToDraft(prog);
-    setDraft(d); setActiveDayKey(d.days[0]._key); setEditingId(prog.id); setMode("edit");
+    setDraft(d); setActiveDayKey(d.days[0]._key); setEditingId(prog.id);
+    setDraftCategoryId(prog.category); setMode("edit");
   };
 
   const openView = (prog: DietProgram) => { setViewProgram(prog); setViewDayIdx(0); setMode("view"); };
@@ -268,7 +326,7 @@ function ProgramsTab({ notify }: { notify: (t: string, ok?: boolean) => void }) 
     if (!token) return;
     setSaving(true);
     try {
-      const payload = draftToPayload(draft);
+      const payload = { ...draftToPayload(draft), category: draftCategoryId };
       if (editingId) {
         await api.admin.dietPrograms.update(token, editingId, payload);
         notify("Program güncellendi.");
@@ -276,7 +334,7 @@ function ProgramsTab({ notify }: { notify: (t: string, ok?: boolean) => void }) 
         await api.admin.dietPrograms.create(token, payload);
         notify("Program oluşturuldu.");
       }
-      setMode("list"); load();
+      setMode("list"); load(selectedCategoryId);
     } catch (err) { notify(err instanceof Error ? err.message : "Hata.", false); }
     finally { setSaving(false); }
   };
@@ -286,7 +344,7 @@ function ProgramsTab({ notify }: { notify: (t: string, ok?: boolean) => void }) 
     if (!token) return;
     const ok = await confirm({ title: "Programı Sil", message: `"${prog.title}" silinecek.`, confirmLabel: "Sil", variant: "danger" });
     if (!ok) return;
-    try { await api.admin.dietPrograms.delete(token, prog.id); notify("Silindi."); load(); }
+    try { await api.admin.dietPrograms.delete(token, prog.id); notify("Silindi."); load(selectedCategoryId); }
     catch { notify("Silinemedi.", false); }
   };
 
@@ -369,6 +427,15 @@ function ProgramsTab({ notify }: { notify: (t: string, ok?: boolean) => void }) 
             <div className="sm:col-span-2">
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Başlık *</label>
               <input required value={draft.title} onChange={(e) => setF("title", e.target.value)} placeholder="örn: 7 Günlük Zayıflama Programı" className={cls} />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Kategori</label>
+              <CustomSelect
+                value={draftCategoryId ? String(draftCategoryId) : ""}
+                onChange={(v) => setDraftCategoryId(v ? Number(v) : null)}
+                options={categoryOptions}
+                placeholder="Kategorisiz"
+              />
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Süre (Gün)</label>
@@ -523,9 +590,53 @@ function ProgramsTab({ notify }: { notify: (t: string, ok?: boolean) => void }) 
     );
   }
 
+  /* ---- Category helpers ---- */
+  const handleCatSave = async (name: string) => {
+    const token = getAccessToken();
+    if (!token || !catDialog) return;
+    if (catDialog.mode === "rename" && catDialog.cat) {
+      await api.admin.updateCategory(token, catDialog.cat.id, { name });
+    } else {
+      await api.admin.createCategory(token, { name, category_type: "diet", parent: catDialog.parentId ?? null });
+    }
+    loadCategories();
+  };
+
+  const handleCatDelete = async (cat: Category) => {
+    const ok = await confirm({ title: "Kategoriyi sil", message: `"${cat.name}" kategorisini silmek istediğinize emin misiniz?`, confirmLabel: "Sil", variant: "danger" });
+    if (!ok) return;
+    const token = getAccessToken();
+    if (!token) return;
+    await api.admin.deleteCategory(token, cat.id);
+    if (selectedCategoryId === cat.id) setSelectedCategoryId(null);
+    loadCategories();
+  };
+
   /* ---- LIST MODE ---- */
   return (
-    <div className="space-y-4">
+    <div className="flex gap-6">
+      {/* Category sidebar */}
+      <div className="hidden w-56 shrink-0 lg:block">
+        <GlassCard className="sticky top-4 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Kategoriler</span>
+            <button type="button" title="Kök kategori ekle" onClick={() => setCatDialog({ mode: "add-root" })} className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white hover:bg-blue-600">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+            </button>
+          </div>
+          <button type="button" onClick={() => setSelectedCategoryId(null)} className={`mb-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium transition-colors ${selectedCategoryId === null ? "bg-blue-500 text-white" : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700/50"}`}>
+            Tümü
+          </button>
+          {categories.length === 0 ? (
+            <p className="py-3 text-center text-xs text-slate-400">Henüz kategori yok</p>
+          ) : (
+            <CategoryTree nodes={categories} selectedId={selectedCategoryId} onSelect={setSelectedCategoryId} onAddChild={(parentId) => setCatDialog({ mode: "add-child", parentId })} onRename={(cat) => setCatDialog({ mode: "rename", cat })} onDelete={handleCatDelete} />
+          )}
+        </GlassCard>
+      </div>
+
+      {/* Main */}
+      <div className="min-w-0 flex-1 space-y-4">
       <div className="flex justify-end">
         <button onClick={openCreate} className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-600">
           + Yeni Program
@@ -535,7 +646,7 @@ function ProgramsTab({ notify }: { notify: (t: string, ok?: boolean) => void }) 
       {loading ? (
         <div className="flex justify-center py-16"><div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-200 border-t-blue-500" /></div>
       ) : programs.length === 0 ? (
-        <GlassCard className="p-10 text-center"><p className="text-slate-500">Henüz beslenme programı oluşturulmamış.</p></GlassCard>
+        <GlassCard className="p-10 text-center"><p className="text-slate-500">{selectedCategoryId ? "Bu kategoride program yok." : "Henüz beslenme programı oluşturulmamış."}</p></GlassCard>
       ) : (
         <div className="space-y-3">
           {programs.map((prog) => (
@@ -556,6 +667,11 @@ function ProgramsTab({ notify }: { notify: (t: string, ok?: boolean) => void }) 
                       </span>
                     )}
                   </div>
+                  {prog.category && (
+                    <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-semibold text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                      {findCatName(categories, prog.category) ?? ""}
+                    </span>
+                  )}
                   {prog.goals && <p className="mt-1 text-xs text-slate-500">{prog.goals}</p>}
                   {prog.feeding_notes && <p className="mt-0.5 text-xs text-slate-400 italic">{prog.feeding_notes}</p>}
                   <p className="mt-1 text-xs text-slate-400">
@@ -572,6 +688,15 @@ function ProgramsTab({ notify }: { notify: (t: string, ok?: boolean) => void }) 
             </GlassCard>
           ))}
         </div>
+      )}
+      </div>
+
+      {catDialog && (
+        <CategoryDialog
+          initial={catDialog.mode === "rename" && catDialog.cat ? catDialog.cat.name : ""}
+          onClose={() => setCatDialog(null)}
+          onSave={handleCatSave}
+        />
       )}
     </div>
   );

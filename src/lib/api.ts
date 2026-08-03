@@ -438,6 +438,7 @@ export interface DietDay {
 
 export interface DietProgram {
   id: number;
+  category: number | null;
   title: string;
   goals: string;
   feeding_notes: string;
@@ -749,8 +750,19 @@ export interface RegionPainLog {
   recorded_at: string;
 }
 
+export interface Category {
+  id: number;
+  name: string;
+  category_type: "exercise" | "diet";
+  parent: number | null;
+  sort_order: number;
+  is_active: boolean;
+  children: Category[];
+}
+
 export interface Exercise {
   id: number;
+  category: number | null;
   title: string;
   description: string;
   image_url: string | null;
@@ -1423,8 +1435,20 @@ export const api = {
         `/wellness/patients/${id}/wellness-history/?days=${days}`, { token }
       ),
 
-    exerciseLibrary: (token: string) =>
-      apiFetch<Exercise[]>("/admin/exercises/", { token }),
+    categoryTree: (token: string, type: "exercise" | "diet") =>
+      apiFetch<Category[]>(`/admin/categories/?type=${type}`, { token }),
+
+    createCategory: (token: string, data: { name: string; category_type: "exercise" | "diet"; parent?: number | null; sort_order?: number }) =>
+      apiFetch<Category>("/admin/categories/", { token, method: "POST", body: JSON.stringify(data) }),
+
+    updateCategory: (token: string, id: number, data: Partial<{ name: string; sort_order: number; is_active: boolean; parent: number | null }>) =>
+      apiFetch<Category>(`/admin/categories/${id}/`, { token, method: "PATCH", body: JSON.stringify(data) }),
+
+    deleteCategory: (token: string, id: number) =>
+      apiFetch<void>(`/admin/categories/${id}/`, { token, method: "DELETE" }),
+
+    exerciseLibrary: (token: string, categoryId?: number | null) =>
+      apiFetch<Exercise[]>(`/admin/exercises/${categoryId ? `?category=${categoryId}` : ""}`, { token }),
 
     createExercise: (
       token: string,
@@ -1750,8 +1774,8 @@ export const api = {
         }).then((r) => { if (!r.ok) throw new Error("Silinemedi."); }),
     },
     dietPrograms: {
-      list: (token: string) =>
-        apiFetch<DietProgram[]>(`/admin/diet-programs/`, { token }),
+      list: (token: string, categoryId?: number | null) =>
+        apiFetch<DietProgram[]>(`/admin/diet-programs/${categoryId ? `?category=${categoryId}` : ""}`, { token }),
       create: (token: string, data: object) =>
         apiFetch<DietProgram>(`/admin/diet-programs/`, { token, method: "POST", body: JSON.stringify(data) }),
       update: (token: string, programId: number, data: object) =>

@@ -335,7 +335,7 @@ function CalendarView({
       </div>
 
       {/* Time grid */}
-      <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: 560 }}>
+      <div ref={scrollRef} className="overflow-y-auto pt-3" style={{ maxHeight: 560 }}>
         <div className="grid grid-cols-[56px_repeat(7,1fr)]">
           {/* Hour labels */}
           <div>
