@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
-import { api, type ExerciseProgram, type ExerciseProgramDay, type ExerciseProgramItem, type ProductPackage, type Exercise, type DietProgram } from "@/lib/api";
+import { api, type ExerciseProgram, type ExerciseProgramDay, type ExerciseProgramItem, type ProgramMealEntry, type ProductPackage, type Exercise, type DietProgram } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -17,6 +17,14 @@ const DIFFICULTY_COLORS: Record<string, string> = {
 };
 
 const WEEK_DAYS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
+
+const MEAL_TYPE_OPTIONS = [
+  { value: "breakfast", label: "🌅 Kahvaltı" },
+  { value: "lunch",     label: "☀️ Öğle" },
+  { value: "dinner",    label: "🌙 Akşam" },
+  { value: "snack",     label: "🍎 Ara Öğün" },
+];
+const MEAL_TYPE_EMOJI: Record<string, string> = { breakfast: "🌅", lunch: "☀️", dinner: "🌙", snack: "🍎" };
 
 function Badge({ children, className }: { children: React.ReactNode; className?: string }) {
   return <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${className}`}>{children}</span>;
@@ -266,6 +274,67 @@ function ItemForm({
   );
 }
 
+// ── Meal Entry Form ───────────────────────────────────────────────────────────
+
+function MealEntryForm({
+  onSave,
+  onCancel,
+}: {
+  onSave: (data: Partial<ProgramMealEntry>) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [form, setForm] = useState({ meal_type: "breakfast", description: "", calories: "" });
+  const [saving, setSaving] = useState(false);
+
+  const handle = async () => {
+    if (!form.description.trim()) return;
+    setSaving(true);
+    try {
+      await onSave({
+        meal_type: form.meal_type as ProgramMealEntry["meal_type"],
+        description: form.description,
+        calories: form.calories ? Number(form.calories) : null,
+      });
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="space-y-3 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-slate-500">Öğün *</label>
+          <CustomSelect
+            value={form.meal_type}
+            onChange={(v) => setForm((f) => ({ ...f, meal_type: v as string }))}
+            options={MEAL_TYPE_OPTIONS}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-slate-500">Kalori (opsiyonel)</label>
+          <input type="number" min={0} value={form.calories}
+            onChange={(e) => setForm((f) => ({ ...f, calories: e.target.value }))}
+            placeholder="ör: 450 kcal"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-xs font-semibold text-slate-500">İçerik *</label>
+          <textarea rows={3} value={form.description}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            placeholder="ör: 2 yumurta, tam buğday ekmek, yeşil salata, zeytinyağı..."
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button type="button" onClick={handle} disabled={saving || !form.description.trim()}
+          className="rounded-xl bg-emerald-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-40">
+          {saving ? "…" : "Ekle"}
+        </button>
+        <button type="button" onClick={onCancel} className="rounded-xl bg-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">İptal</button>
+      </div>
+    </div>
+  );
+}
+
 // ── Package Form ──────────────────────────────────────────────────────────────
 
 function PackageForm({
@@ -441,6 +510,20 @@ export default function ProgramlarPage() {
     await load();
   };
 
+  // ── Meal handlers ──
+  const handleCreateMeal = async (dayId: number, data: Partial<ProgramMealEntry>) => {
+    await api.admin.createProgramMeal(token, dayId, data);
+    setOpenId(null);
+    await load();
+  };
+
+  const handleDeleteMeal = async (meal: ProgramMealEntry) => {
+    const ok = await confirm({ title: "Öğünü kaldır", message: `"${meal.meal_type_label}" öğünü kaldırılacak.`, confirmLabel: "Kaldır" });
+    if (!ok) return;
+    await api.admin.deleteProgramMeal(token, meal.id);
+    await load();
+  };
+
   // ── Package handlers ──
   const handleCreatePackage = async (data: Partial<ProductPackage>) => {
     await api.admin.createProductPackage(token, data);
@@ -601,12 +684,16 @@ export default function ProgramlarPage() {
                                     {getDayLabel(prog, day)}
                                     {day.title ? ` — ${day.title}` : ""}
                                   </span>
-                                  <span className="ml-1 text-xs text-slate-400">{day.items.length} egzersiz</span>
+                                  <span className="ml-1 text-xs text-slate-400">{day.items.length} egzersiz · {day.meal_entries.length} öğün</span>
                                 </button>
                                 <div className="flex gap-1">
                                   <button type="button" onClick={() => { if (!isDayExpanded) toggleDay(day.id); setOpenId(openId === newItemKey ? null : newItemKey); }}
                                     className="rounded-full border border-emerald-400/40 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 hover:bg-emerald-50">
                                     + Egzersiz
+                                  </button>
+                                  <button type="button" onClick={() => { if (!isDayExpanded) toggleDay(day.id); setOpenId(openId === `new-meal-${day.id}` ? null : `new-meal-${day.id}`); }}
+                                    className="rounded-full border border-orange-400/40 px-2.5 py-1 text-[11px] font-semibold text-orange-600 hover:bg-orange-50 dark:text-orange-400">
+                                    + Öğün
                                   </button>
                                   <button type="button" onClick={() => handleDeleteDay(day, prog.name)}
                                     className="rounded-full border border-red-300/40 px-2.5 py-1 text-[11px] font-semibold text-red-500 hover:bg-red-50">
@@ -617,42 +704,82 @@ export default function ProgramlarPage() {
 
                               {/* Day content */}
                               {isDayExpanded && (
-                                <div className="border-t border-slate-100 px-4 pb-3 pt-2 dark:border-slate-800">
-                                  {openId === newItemKey && (
-                                    <div className="mb-3">
-                                      <ItemForm
-                                        exercises={exercises}
-                                        onSave={(data) => handleCreateItem(day.id, data)}
-                                        onCancel={() => setOpenId(null)}
-                                      />
-                                    </div>
-                                  )}
-                                  {day.items.length === 0 ? (
-                                    <p className="text-xs italic text-slate-400">Egzersiz yok.</p>
-                                  ) : (
-                                    <div className="space-y-1">
-                                      {day.items.map((item) => {
-                                        const ex = exercises.find((e) => e.id === item.exercise);
-                                        return (
-                                          <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/40">
-                                            <div>
-                                              <span className="text-sm font-medium text-slate-800 dark:text-slate-100">{item.exercise_title || ex?.title}</span>
-                                              <span className="ml-2 text-xs text-slate-400">
-                                                {item.sets} set ×{" "}
-                                                {item.reps ? `${item.reps} tekrar` : item.duration_seconds ? `${item.duration_seconds}sn` : "—"}
-                                                {" · "}{item.rest_seconds}sn dinlenme
-                                              </span>
-                                              {item.note && <span className="ml-2 text-xs italic text-slate-400">{item.note}</span>}
+                                <div className="border-t border-slate-100 px-4 pb-3 pt-2 dark:border-slate-800 space-y-3">
+
+                                  {/* Egzersizler */}
+                                  <div>
+                                    <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">🏋️ Egzersizler</p>
+                                    {openId === newItemKey && (
+                                      <div className="mb-2">
+                                        <ItemForm
+                                          exercises={exercises}
+                                          onSave={(data) => handleCreateItem(day.id, data)}
+                                          onCancel={() => setOpenId(null)}
+                                        />
+                                      </div>
+                                    )}
+                                    {day.items.length === 0 ? (
+                                      <p className="text-xs italic text-slate-400">Egzersiz eklenmedi.</p>
+                                    ) : (
+                                      <div className="space-y-1">
+                                        {day.items.map((item) => {
+                                          const ex = exercises.find((e) => e.id === item.exercise);
+                                          return (
+                                            <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/40">
+                                              <div>
+                                                <span className="text-sm font-medium text-slate-800 dark:text-slate-100">{item.exercise_title || ex?.title}</span>
+                                                <span className="ml-2 text-xs text-slate-400">
+                                                  {item.sets} set ×{" "}
+                                                  {item.reps ? `${item.reps} tekrar` : item.duration_seconds ? `${item.duration_seconds}sn` : "—"}
+                                                  {" · "}{item.rest_seconds}sn dinlenme
+                                                </span>
+                                                {item.note && <span className="ml-2 text-xs italic text-slate-400">{item.note}</span>}
+                                              </div>
+                                              <button type="button" onClick={() => handleDeleteItem(item)}
+                                                className="ml-3 shrink-0 rounded-lg bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-500 hover:bg-red-100">
+                                                Kaldır
+                                              </button>
                                             </div>
-                                            <button type="button" onClick={() => handleDeleteItem(item)}
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Öğünler */}
+                                  <div>
+                                    <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">🍽️ Öğünler</p>
+                                    {openId === `new-meal-${day.id}` && (
+                                      <div className="mb-2">
+                                        <MealEntryForm
+                                          onSave={(data) => handleCreateMeal(day.id, data)}
+                                          onCancel={() => setOpenId(null)}
+                                        />
+                                      </div>
+                                    )}
+                                    {day.meal_entries.length === 0 ? (
+                                      <p className="text-xs italic text-slate-400">Öğün eklenmedi.</p>
+                                    ) : (
+                                      <div className="space-y-1">
+                                        {day.meal_entries.map((meal) => (
+                                          <div key={meal.id} className="flex items-start justify-between rounded-lg bg-orange-50/60 px-3 py-2 dark:bg-orange-950/20">
+                                            <div className="flex-1 min-w-0">
+                                              <div className="flex items-center gap-1.5 mb-0.5">
+                                                <span className="text-sm">{MEAL_TYPE_EMOJI[meal.meal_type]}</span>
+                                                <span className="text-xs font-bold text-orange-700 dark:text-orange-400">{meal.meal_type_label}</span>
+                                                {meal.calories && <span className="text-xs text-slate-400">{meal.calories} kcal</span>}
+                                              </div>
+                                              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{meal.description}</p>
+                                            </div>
+                                            <button type="button" onClick={() => handleDeleteMeal(meal)}
                                               className="ml-3 shrink-0 rounded-lg bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-500 hover:bg-red-100">
                                               Kaldır
                                             </button>
                                           </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               )}
                             </div>

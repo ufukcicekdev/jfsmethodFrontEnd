@@ -842,12 +842,22 @@ export interface ExerciseProgramItem {
   sort_order: number;
 }
 
+export interface ProgramMealEntry {
+  id: number;
+  meal_type: "breakfast" | "lunch" | "dinner" | "snack";
+  meal_type_label: string;
+  description: string;
+  calories: number | null;
+  sort_order: number;
+}
+
 export interface ExerciseProgramDay {
   id: number;
   day_number: number;
   title: string;
   sort_order: number;
   items: ExerciseProgramItem[];
+  meal_entries: ProgramMealEntry[];
 }
 
 export interface ExerciseProgram {
@@ -1627,6 +1637,12 @@ export const api = {
 
     deleteProgramItem: (token: string, itemId: number) =>
       apiFetch<void>(`/admin/program-items/${itemId}/`, { token, method: "DELETE" }),
+
+    createProgramMeal: (token: string, dayId: number, data: Partial<ProgramMealEntry>) =>
+      apiFetch<ProgramMealEntry>(`/admin/program-days/${dayId}/meals/`, { token, method: "POST", body: JSON.stringify(data) }),
+
+    deleteProgramMeal: (token: string, mealId: number) =>
+      apiFetch<void>(`/admin/program-meals/${mealId}/`, { token, method: "DELETE" }),
 
     // Product Packages
     productPackages: (token: string) =>
