@@ -2160,8 +2160,21 @@ export const api = {
     // Admin user management
     adminUsers: (token: string) =>
       apiFetch<AdminUser[]>("/admin/admin-users/", { token }),
-    createAdminUser: (token: string, data: Partial<AdminUser> & { password: string }) =>
-      apiFetch<AdminUser>("/admin/admin-users/", { token, method: "POST", body: JSON.stringify(data) }),
+    createAdminUser: async (token: string, data: Partial<AdminUser> & { password: string; promote_existing?: boolean }) => {
+      const res = await fetch(`${API_BASE}/admin/admin-users/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.status === 409 && body.detail === "conflict_existing_student") {
+        const err = new Error("conflict_existing_student") as Error & { existingUser?: AdminUser["id"] extends number ? { id: number; username: string; full_name: string; email: string } : never };
+        (err as { conflict?: unknown }).conflict = body.existing_user;
+        throw err;
+      }
+      if (!res.ok) throw new Error(body.detail ?? `API error: ${res.status}`);
+      return body as AdminUser;
+    },
     updateAdminUser: (token: string, id: number, data: Partial<AdminUser> & { password?: string }) =>
       apiFetch<AdminUser>(`/admin/admin-users/${id}/`, { token, method: "PATCH", body: JSON.stringify(data) }),
     deleteAdminUser: (token: string, id: number) =>

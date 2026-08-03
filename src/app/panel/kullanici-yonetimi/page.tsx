@@ -110,11 +110,8 @@ export default function AdminUserManagementPage() {
     setMessage(null);
     try {
       const allSlugs = ALL_SECTIONS.map((s) => s.slug);
-      // Tüm bölümler seçiliyse boş liste gönder (= kısıtlama yok)
       const sections =
-        form.allowed_sections.length === allSlugs.length
-          ? []
-          : form.allowed_sections;
+        form.allowed_sections.length === allSlugs.length ? [] : form.allowed_sections;
 
       if (editingUser) {
         const payload: Parameters<typeof api.admin.updateAdminUser>[2] = {
@@ -126,19 +123,43 @@ export default function AdminUserManagementPage() {
         if (form.password) payload.password = form.password;
         await api.admin.updateAdminUser(token, editingUser.id, payload);
         setMessage({ type: "success", text: "Kullanıcı güncellendi." });
+        closeModal();
+        load();
       } else {
-        await api.admin.createAdminUser(token, {
+        const payload = {
           username: form.username,
           email: form.email,
           password: form.password,
           first_name: form.first_name,
           last_name: form.last_name,
           allowed_sections: sections,
-        });
-        setMessage({ type: "success", text: "Admin kullanıcı oluşturuldu." });
+        };
+        try {
+          await api.admin.createAdminUser(token, payload);
+          setMessage({ type: "success", text: "Admin kullanıcı oluşturuldu." });
+          closeModal();
+          load();
+        } catch (createErr) {
+          if (createErr instanceof Error && createErr.message === "conflict_existing_student") {
+            const conflict = (createErr as { conflict?: { full_name: string; username: string } }).conflict;
+            const name = conflict?.full_name || conflict?.username || "Bu kullanıcı";
+            const ok = await confirm({
+              title: "Mevcut öğrenci bulundu",
+              message: `"${name}" adlı kişi sistemde zaten öğrenci olarak kayıtlı. Bu kişiye admin yetkisi vermek ister misiniz? Mevcut öğrenci hesabı korunur.`,
+              confirmLabel: "Evet, admin yap",
+              cancelLabel: "Hayır, iptal",
+            });
+            if (ok) {
+              await api.admin.createAdminUser(token, { ...payload, promote_existing: true });
+              setMessage({ type: "success", text: "Öğrenci admin olarak yetkilendirildi." });
+              closeModal();
+              load();
+            }
+          } else {
+            throw createErr;
+          }
+        }
       }
-      closeModal();
-      load();
     } catch (err) {
       setMessage({ type: "error", text: err instanceof Error ? err.message : "İşlem başarısız." });
     } finally {
