@@ -52,6 +52,14 @@ function isoDate(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+// Local-timezone date string — avoids UTC shift when grouping by day
+function localDate(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function startOfWeek(d: Date) {
   const day = d.getDay(); // 0=Sun
   const diff = day === 0 ? -6 : 1 - day; // Monday
@@ -299,14 +307,14 @@ function CalendarView({
   const byDay = useMemo(() => {
     const map: Record<string, Appointment[]> = {};
     for (const a of appointments) {
-      const key = isoDate(new Date(a.appointment_datetime));
+      const key = localDate(new Date(a.appointment_datetime));
       if (!map[key]) map[key] = [];
       map[key].push(a);
     }
     return map;
   }, [appointments]);
 
-  const todayStr = isoDate(new Date());
+  const todayStr = localDate(new Date());
 
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white dark:border-slate-700/60 dark:bg-slate-900">
@@ -314,7 +322,7 @@ function CalendarView({
       <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-slate-200/80 dark:border-slate-700/60">
         <div className="border-r border-slate-200/80 dark:border-slate-700/60" />
         {days.map((d, i) => {
-          const ds = isoDate(d);
+          const ds = localDate(d);
           const isToday = ds === todayStr;
           return (
             <div key={i} className={`flex flex-col items-center py-3 border-r last:border-r-0 border-slate-200/80 dark:border-slate-700/60 ${isToday ? "bg-blue-50/60 dark:bg-blue-950/20" : ""}`}>
@@ -348,7 +356,7 @@ function CalendarView({
 
           {/* Day columns */}
           {days.map((d, di) => {
-            const ds = isoDate(d);
+            const ds = localDate(d);
             const isToday = ds === todayStr;
             const dayAppts = byDay[ds] ?? [];
 
