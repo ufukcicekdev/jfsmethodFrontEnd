@@ -335,13 +335,13 @@ function CalendarView({
       </div>
 
       {/* Time grid */}
-      <div ref={scrollRef} className="overflow-y-auto pt-3" style={{ maxHeight: 560 }}>
+      <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: 560 }}>
         <div className="grid grid-cols-[56px_repeat(7,1fr)]">
           {/* Hour labels */}
           <div>
             {HOURS.map((h) => (
               <div key={h} style={{ height: SLOT_H }} className="relative border-b border-slate-100/80 dark:border-slate-800/60 pr-2 text-right">
-                <span className="absolute -top-2.5 right-2 text-[10px] text-slate-400">{h}:00</span>
+                <span className="absolute top-1 right-2 text-[10px] text-slate-400">{h}:00</span>
               </div>
             ))}
           </div>
