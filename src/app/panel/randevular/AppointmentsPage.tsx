@@ -11,7 +11,8 @@ import { getAccessToken } from "@/lib/auth";
 import { api, type Appointment } from "@/lib/api";
 
 const PAGE_SIZE = 50;
-const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 08:00 – 20:00
+const DEFAULT_START = 8;
+const DEFAULT_END = 20;
 const SLOT_H = 56; // px per hour
 
 const STATUS_LABELS: Record<Appointment["status"], string> = {
@@ -296,10 +297,29 @@ function CalendarView({
   const { actionLoading, changeStatus } = useAppointmentActions((a) => { onUpdate(a); setSelected(a); });
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to 08:00 on mount
+  // Compute hour range from actual appointments, fallback to defaults
+  const { startHour, endHour } = useMemo(() => {
+    if (appointments.length === 0) return { startHour: DEFAULT_START, endHour: DEFAULT_END };
+    let min = 23, max = 0;
+    for (const a of appointments) {
+      const h = new Date(a.appointment_datetime).getHours();
+      if (h < min) min = h;
+      if (h > max) max = h;
+    }
+    return {
+      startHour: Math.max(0, min - 1),
+      endHour: Math.min(23, max + 1),
+    };
+  }, [appointments]);
+
+  const HOURS = Array.from({ length: endHour - startHour + 1 }, (_, i) => i + startHour);
+
+  // Scroll to first appointment hour on load
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = 0;
-  }, [weekStart]);
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = appointments.length > 0 ? Math.max(0, (startHour - DEFAULT_START)) * SLOT_H : 0;
+    }
+  }, [weekStart, startHour]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -372,10 +392,10 @@ function CalendarView({
                   const dt = new Date(appt.appointment_datetime);
                   const hour = dt.getHours();
                   const min = dt.getMinutes();
-                  const top = (hour - 8) * SLOT_H + (min / 60) * SLOT_H;
+                  const top = (hour - startHour) * SLOT_H + (min / 60) * SLOT_H;
                   const dur = appt.duration_minutes ?? 45;
                   const height = Math.max((dur / 60) * SLOT_H, 28);
-                  if (hour < 8 || hour > 20) return null;
+                  if (hour < startHour || hour > endHour) return null;
 
                   return (
                     <button
