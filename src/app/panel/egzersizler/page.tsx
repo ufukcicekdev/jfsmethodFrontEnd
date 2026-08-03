@@ -356,6 +356,31 @@ export default function ExerciseLibraryPage() {
 
       {/* ── Main content ─────────────────────────────────────────────────────── */}
       <div className="min-w-0 flex-1 space-y-4 sm:space-y-6">
+        {/* Mobile category strip */}
+        {categories.length > 0 && (
+          <div className="lg:hidden -mx-1 overflow-x-auto pb-1">
+            <div className="flex gap-2 px-1">
+              <button
+                type="button"
+                onClick={() => setSelectedCategoryId(null)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${selectedCategoryId === null ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"}`}
+              >
+                Tümü
+              </button>
+              {flattenCategories(categories).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setSelectedCategoryId(Number(opt.value))}
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${selectedCategoryId === Number(opt.value) ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold text-slate-900 sm:text-2xl dark:text-slate-50">
@@ -435,12 +460,19 @@ export default function ExerciseLibraryPage() {
           </div>
         )}
 
-        {/* ── Exercise form ───────────────────────────────────────────────────── */}
-        {showForm && (
-          <GlassCard className="p-4 sm:p-6">
+      </div>
+
+      {/* ── Exercise form MODAL ─────────────────────────────────────────────────── */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}>
+          <div className="my-8 w-full max-w-2xl rounded-2xl bg-white shadow-2xl dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200/60 px-6 py-4 dark:border-slate-700/50">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
               {editingId ? "Egzersizi Düzenle" : "Yeni Egzersiz Ekle"}
             </h2>
+            <button type="button" onClick={resetForm} className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800">✕</button>
+            </div>
+            <div className="p-6">
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
               <FormField
                 label="Egzersiz Adı"
@@ -523,9 +555,10 @@ export default function ExerciseLibraryPage() {
                 </button>
               </div>
             </form>
-          </GlassCard>
-        )}
-      </div>
+          </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Lightbox ───────────────────────────────────────────────────────────── */}
       {lightbox && (

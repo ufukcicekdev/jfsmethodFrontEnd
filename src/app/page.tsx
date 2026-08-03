@@ -11,6 +11,7 @@ import { HeroSection } from "@/components/sections/HeroSection";
 import { HowItWorksGrid } from "@/components/sections/HowItWorksGrid";
 import { ContactSection } from "@/components/sections/ContactSection";
 import { PackagesSection } from "@/components/sections/PackagesSection";
+import { ProgramsSection } from "@/components/sections/ProgramsSection";
 import { RegisterSection } from "@/components/sections/RegisterSection";
 import { StatsStrip } from "@/components/sections/StatsStrip";
 import { TestimonialsSection } from "@/components/sections/TestimonialsSection";
@@ -26,7 +27,7 @@ const ALL_ON: Partial<SiteSettings> = {
   section_stats: true, section_marquee: true, section_about: true,
   section_services: true, section_digital_twin: true, section_treatments: true,
   section_how_it_works: true, section_why_us: true, section_testimonials: true,
-  section_packages: true, section_cta: true, section_faq: true,
+  section_packages: true, section_programs: true, section_cta: true, section_faq: true,
   registration_enabled: true,
 };
 
@@ -57,6 +58,7 @@ export default function Home() {
         <ExpertProfile />
         {show("section_cta") && <CtaBanner />}
         {show("section_packages") && <PackagesSection />}
+        {show("section_programs") && <ProgramsSection />}
         {show("registration_enabled") && <RegisterSection />}
         {show("section_faq") && <FaqSection />}
         <ContactSection />

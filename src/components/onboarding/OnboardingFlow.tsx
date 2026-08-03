@@ -15,6 +15,26 @@ type Step =
   | { kind: "intro"; section: OnboardingSection }
   | { kind: "question"; question: OnboardingQuestion; sectionTitle: string; sectionIndex: number; totalSections: number };
 
+const STORAGE_KEY = "onboarding_draft";
+
+function loadDraft(): { current: number; answers: Record<number, AnswerValue> } {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return { current: 0, answers: {} };
+}
+
+function saveDraft(current: number, answers: Record<number, AnswerValue>) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ current, answers }));
+  } catch { /* ignore */ }
+}
+
+function clearDraft() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+}
+
 export function OnboardingFlow({ onComplete }: Props) {
   const [steps, setSteps] = useState<Step[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +44,9 @@ export function OnboardingFlow({ onComplete }: Props) {
   const [error, setError] = useState("");
   const [animating, setAnimating] = useState(false);
   const [direction, setDirection] = useState<"forward" | "back">("forward");
+
+  // Restore draft on first load
+  const [draftRestored, setDraftRestored] = useState(false);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -42,16 +65,30 @@ export function OnboardingFlow({ onComplete }: Props) {
           });
         });
 
-        // Unassigned questions (no section) go as a plain flow without intro
         unassigned_questions.filter((q) => q.is_active !== false).forEach((q) => {
           built.push({ kind: "question", question: q, sectionTitle: "", sectionIndex: 0, totalSections });
         });
 
         setSteps(built);
+
+        // Restore saved progress after steps are known
+        const draft = loadDraft();
+        if (draft.current > 0 || Object.keys(draft.answers).length > 0) {
+          // Clamp current to valid range
+          setCurrent(Math.min(draft.current, built.length - 1));
+          setAnswers(draft.answers);
+        }
+        setDraftRestored(true);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
+
+  // Persist progress whenever current or answers change (after restore)
+  useEffect(() => {
+    if (!draftRestored) return;
+    saveDraft(current, answers);
+  }, [current, answers, draftRestored]);
 
   const step = steps[current];
   const totalSteps = steps.length;
@@ -90,6 +127,7 @@ export function OnboardingFlow({ onComplete }: Props) {
         token,
         allQuestions.map((q) => ({ question_id: q.id, answer: answers[q.id] ?? "" }))
       );
+      clearDraft();
       onComplete();
     } catch {
       setError("Gönderim başarısız. Lütfen tekrar deneyin.");

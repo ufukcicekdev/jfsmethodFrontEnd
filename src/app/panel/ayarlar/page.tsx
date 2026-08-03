@@ -72,7 +72,7 @@ const EMPTY: SiteSettings = {
   section_stats: true, section_marquee: true, section_about: true,
   section_services: true, section_digital_twin: true, section_treatments: true,
   section_how_it_works: true, section_why_us: true, section_testimonials: true,
-  section_packages: true, section_cta: true, section_faq: true,
+  section_packages: true, section_programs: true, section_cta: true, section_faq: true,
   expert_visible: true, expert_name: "", expert_title: "", expert_bio: "",
   expert_years: 0, expert_patient_count: "", expert_rating: "", expert_badges: "",
 };
@@ -488,6 +488,7 @@ export default function SettingsPage() {
     { key: "section_why_us", label: "Neden JFS" },
     { key: "section_testimonials", label: "Hasta Yorumları" },
     { key: "section_packages", label: "Paketler" },
+    { key: "section_programs", label: "Programlar" },
     { key: "section_cta", label: "CTA Banner" },
     { key: "section_faq", label: "Sıkça Sorulan Sorular (SSS)" },
     { key: "registration_enabled", label: "Kayıt Ol Formu" },

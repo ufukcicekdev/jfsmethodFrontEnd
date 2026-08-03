@@ -386,6 +386,7 @@ export interface PostureAssessment {
 export interface DietItem {
   id: number;
   name: string;
+  category?: number | null;
   calories: number;
   protein: number;
   carbs: number;
@@ -606,6 +607,7 @@ export interface SiteSettings {
   section_why_us: boolean;
   section_testimonials: boolean;
   section_packages: boolean;
+  section_programs: boolean;
   section_cta: boolean;
   section_faq: boolean;
   expert_visible: boolean;
@@ -763,7 +765,7 @@ export interface RegionPainLog {
 export interface Category {
   id: number;
   name: string;
-  category_type: "exercise" | "diet";
+  category_type: "exercise" | "diet" | "food";
   parent: number | null;
   sort_order: number;
   is_active: boolean;
@@ -844,8 +846,11 @@ export interface ExerciseProgramItem {
 
 export interface ProgramMealEntry {
   id: number;
-  meal_type: "breakfast" | "lunch" | "dinner" | "snack";
+  meal_type: "sabah" | "ara1" | "ogle" | "ara2" | "aksam" | "gece";
   meal_type_label: string;
+  diet_items: DietItem[];
+  diet_item_ids?: number[];
+  notification_time: string | null;
   description: string;
   calories: number | null;
   sort_order: number;
@@ -871,6 +876,22 @@ export interface ExerciseProgram {
   is_active: boolean;
   created_at: string;
   days: ExerciseProgramDay[];
+}
+
+export interface PublicProductPackage {
+  id: number;
+  name: string;
+  description: string;
+  price: string | null;
+  exercise_program: {
+    name: string;
+    difficulty: "easy" | "medium" | "hard";
+    duration_weeks: number;
+    program_type: "weekly" | "sequential";
+    day_count: number;
+    preview_days: { day_number: number; title: string; exercise_count: number }[];
+  } | null;
+  diet_program: { name: string } | null;
 }
 
 export interface ProductPackage {
@@ -1595,10 +1616,10 @@ export const api = {
         `/wellness/patients/${patientId}/program-logs/`, { token }
       ),
 
-    categoryTree: (token: string, type: "exercise" | "diet") =>
+    categoryTree: (token: string, type: "exercise" | "diet" | "food") =>
       apiFetch<Category[]>(`/admin/categories/?type=${type}`, { token }),
 
-    createCategory: (token: string, data: { name: string; category_type: "exercise" | "diet"; parent?: number | null; sort_order?: number }) =>
+    createCategory: (token: string, data: { name: string; category_type: "exercise" | "diet" | "food"; parent?: number | null; sort_order?: number }) =>
       apiFetch<Category>("/admin/categories/", { token, method: "POST", body: JSON.stringify(data) }),
 
     updateCategory: (token: string, id: number, data: Partial<{ name: string; sort_order: number; is_active: boolean; parent: number | null }>) =>
@@ -2134,6 +2155,8 @@ export const api = {
 
   site: {
     settings: () => apiFetch<SiteSettings>("/site-settings/"),
+
+    publicPackages: () => apiFetch<PublicProductPackage[]>("/product-packages/"),
 
     contact: (data: ContactSubmitPayload) =>
       apiFetch<{ detail: string }>("/contact/", {

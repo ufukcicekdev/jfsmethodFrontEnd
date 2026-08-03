@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
-import { api, type ExerciseProgram, type ExerciseProgramDay, type ExerciseProgramItem, type ProgramMealEntry, type ProductPackage, type Exercise, type DietProgram } from "@/lib/api";
+import { api, type ExerciseProgram, type ExerciseProgramDay, type ExerciseProgramItem, type ProgramMealEntry, type ProductPackage, type Exercise, type DietProgram, type DietItem, type Category } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -19,12 +19,16 @@ const DIFFICULTY_COLORS: Record<string, string> = {
 const WEEK_DAYS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
 
 const MEAL_TYPE_OPTIONS = [
-  { value: "breakfast", label: "🌅 Kahvaltı" },
-  { value: "lunch",     label: "☀️ Öğle" },
-  { value: "dinner",    label: "🌙 Akşam" },
-  { value: "snack",     label: "🍎 Ara Öğün" },
+  { value: "sabah", label: "🌅 Kahvaltı" },
+  { value: "ara1",  label: "🍎 Ara Öğün 1" },
+  { value: "ogle",  label: "☀️ Öğle" },
+  { value: "ara2",  label: "🥜 Ara Öğün 2" },
+  { value: "aksam", label: "🌙 Akşam" },
+  { value: "gece",  label: "🌛 Gece" },
 ];
-const MEAL_TYPE_EMOJI: Record<string, string> = { breakfast: "🌅", lunch: "☀️", dinner: "🌙", snack: "🍎" };
+const MEAL_TYPE_EMOJI: Record<string, string> = {
+  sabah: "🌅", ara1: "🍎", ogle: "☀️", ara2: "🥜", aksam: "🌙", gece: "🌛",
+};
 
 function Badge({ children, className }: { children: React.ReactNode; className?: string }) {
   return <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${className}`}>{children}</span>;
@@ -184,19 +188,110 @@ function DayForm({
 
 // ── Item Form ─────────────────────────────────────────────────────────────────
 
+// ── Exercise Picker (hierarchical) ───────────────────────────────────────────
+
+function ExercisePicker({
+  token,
+  exercises,
+  selectedId,
+  onChange,
+}: {
+  token: string;
+  exercises: Exercise[];
+  selectedId: number;
+  onChange: (id: number) => void;
+}) {
+  const [rootCats, setRootCats] = useState<Category[]>([]);
+  const [catPath, setCatPath] = useState<Category[]>([]);
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    api.admin.categoryTree(token, "exercise").then(setRootCats).catch(() => {});
+  }, [token]);
+
+  const currentCat = catPath[catPath.length - 1] ?? null;
+  const currentChildren = currentCat ? currentCat.children : rootCats;
+  const hasChildren = currentChildren.length > 0;
+
+  const visibleExercises = query.trim()
+    ? exercises.filter((e) => e.title.toLowerCase().includes(query.toLowerCase()))
+    : exercises.filter((e) => {
+        if (!currentCat) return !e.category;
+        return e.category === currentCat.id;
+      });
+
+  const selectedEx = exercises.find((e) => e.id === selectedId);
+
+  return (
+    <div className="space-y-2">
+      {/* Selected chip */}
+      {selectedEx && (
+        <div className="flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 dark:bg-blue-900/20">
+          <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">{selectedEx.title}</span>
+          <button type="button" onClick={() => onChange(0)} className="ml-auto text-xs text-slate-400 hover:text-red-500">×</button>
+        </div>
+      )}
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Egzersiz ara…"
+        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+      />
+      {!query.trim() && hasChildren && (
+        <CategoryBreadcrumb
+          categories={currentChildren}
+          path={catPath}
+          onSelect={(c) => { setCatPath((p) => [...p, c]); setQuery(""); }}
+          onBack={() => { setCatPath((p) => p.slice(0, -1)); setQuery(""); }}
+          accentClass="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800/50 dark:bg-blue-900/20 dark:text-blue-300"
+        />
+      )}
+      {!query.trim() && !hasChildren && catPath.length > 0 && (
+        <button type="button" onClick={() => setCatPath((p) => p.slice(0, -1))} className="text-[11px] text-slate-400 underline hover:text-slate-600">
+          ‹ Geri
+        </button>
+      )}
+      {(query.trim() || !hasChildren) && (
+        <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+          {visibleExercises.length === 0 ? (
+            <p className="px-3 py-2 text-xs text-slate-400">{query.trim() ? "Sonuç bulunamadı" : "Bu kategoride egzersiz yok"}</p>
+          ) : (
+            visibleExercises.map((e) => {
+              const isSel = e.id === selectedId;
+              return (
+                <button key={e.id} type="button" onClick={() => onChange(e.id)}
+                  className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800 ${isSel ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}
+                >
+                  <span className={`font-medium ${isSel ? "text-blue-700 dark:text-blue-300" : "text-slate-800 dark:text-slate-100"}`}>
+                    {isSel && "✓ "}{e.title}
+                  </span>
+                  <span className="shrink-0 text-xs text-slate-400">{e.sets}×{e.reps}</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ItemForm({
+  token,
   exercises,
   initial,
   onSave,
   onCancel,
 }: {
+  token: string;
   exercises: Exercise[];
   initial?: Partial<ExerciseProgramItem>;
   onSave: (data: Partial<ExerciseProgramItem>) => Promise<void>;
   onCancel: () => void;
 }) {
   const [form, setForm] = useState({
-    exercise: initial?.exercise ?? (exercises[0]?.id ?? 0),
+    exercise: initial?.exercise ?? 0,
     sets: initial?.sets ?? 3,
     reps: initial?.reps ?? (10 as number | null),
     duration_seconds: initial?.duration_seconds ?? (null as number | null),
@@ -226,11 +321,11 @@ function ItemForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className="mb-1 block text-xs font-semibold text-slate-500">Egzersiz *</label>
-          <CustomSelect
-            value={form.exercise}
-            onChange={(v) => setForm((f) => ({ ...f, exercise: Number(v) }))}
-            options={exercises.map((ex) => ({ value: ex.id, label: ex.title }))}
-            placeholder="Egzersiz seçin"
+          <ExercisePicker
+            token={token}
+            exercises={exercises}
+            selectedId={form.exercise}
+            onChange={(id) => setForm((f) => ({ ...f, exercise: id }))}
           />
         </div>
         <div>
@@ -276,31 +371,203 @@ function ItemForm({
 
 // ── Meal Entry Form ───────────────────────────────────────────────────────────
 
+// ── Shared: category breadcrumb picker ───────────────────────────────────────
+
+function CategoryBreadcrumb({
+  categories,
+  path,
+  onSelect,
+  onBack,
+  accentClass,
+}: {
+  categories: Category[];
+  path: Category[];
+  onSelect: (c: Category) => void;
+  onBack: () => void;
+  accentClass: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-1 text-xs text-slate-400">
+        <button type="button" onClick={onBack} className="hover:text-slate-600 dark:hover:text-slate-200">
+          {path.length === 0 ? "Kategoriler" : path.map((p) => p.name).join(" › ")}
+        </button>
+        {path.length > 0 && (
+          <button type="button" onClick={onBack} className="ml-auto text-[10px] underline hover:text-slate-600">
+            ‹ Geri
+          </button>
+        )}
+      </div>
+      {/* Category buttons */}
+      <div className="flex flex-wrap gap-1.5">
+        {categories.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => onSelect(c)}
+            className={`rounded-full border px-3 py-1 text-xs font-semibold transition hover:opacity-80 ${accentClass}`}
+          >
+            {c.name}
+            {c.children.length > 0 && <span className="ml-1 opacity-60">›</span>}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Diet Item Picker (hierarchical) ──────────────────────────────────────────
+
+function DietItemPicker({
+  token,
+  selected,
+  onChange,
+}: {
+  token: string;
+  selected: DietItem[];
+  onChange: (items: DietItem[]) => void;
+}) {
+  const [allItems, setAllItems] = useState<DietItem[]>([]);
+  const [rootCats, setRootCats] = useState<Category[]>([]);
+  const [catPath, setCatPath] = useState<Category[]>([]); // breadcrumb stack
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    api.admin.dietItems.list(token).then(setAllItems).catch(() => {});
+    api.admin.categoryTree(token, "food").then(setRootCats).catch(() => {});
+  }, [token]);
+
+  const toggle = (item: DietItem) => {
+    const exists = selected.find((s) => s.id === item.id);
+    onChange(exists ? selected.filter((s) => s.id !== item.id) : [...selected, item]);
+  };
+
+  // current level categories
+  const currentCat = catPath[catPath.length - 1] ?? null;
+  const currentChildren = currentCat ? currentCat.children : rootCats;
+  const hasChildren = currentChildren.length > 0;
+
+  // items visible at this level (direct children of currentCat, or uncategorised if root)
+  const visibleItems = query.trim()
+    ? allItems.filter((d) => d.name.toLowerCase().includes(query.toLowerCase()))
+    : allItems.filter((d) => {
+        if (!currentCat) return !d.category; // root → uncategorised
+        return d.category === currentCat.id;
+      });
+
+  const handleSelectCat = (c: Category) => {
+    setCatPath((p) => [...p, c]);
+    setQuery("");
+  };
+
+  const handleBack = () => {
+    setCatPath((p) => p.slice(0, -1));
+    setQuery("");
+  };
+
+  return (
+    <div className="space-y-2">
+      {/* Selected chips */}
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map((s) => (
+            <span key={s.id} className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+              {s.name}
+              <button type="button" onClick={() => toggle(s)} className="leading-none hover:text-red-500">×</button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Search bar */}
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="İsme göre ara…"
+        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+      />
+
+      {/* Category nav — hidden when searching */}
+      {!query.trim() && hasChildren && (
+        <CategoryBreadcrumb
+          categories={currentChildren}
+          path={catPath}
+          onSelect={handleSelectCat}
+          onBack={handleBack}
+          accentClass="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/50 dark:bg-emerald-900/20 dark:text-emerald-300"
+        />
+      )}
+      {!query.trim() && !hasChildren && catPath.length > 0 && (
+        <button type="button" onClick={handleBack} className="text-[11px] text-slate-400 underline hover:text-slate-600">
+          ‹ Geri
+        </button>
+      )}
+
+      {/* Item list */}
+      {(query.trim() || !hasChildren) && (
+        <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+          {visibleItems.length === 0 ? (
+            <p className="px-3 py-2 text-xs text-slate-400">
+              {query.trim() ? "Sonuç bulunamadı" : "Bu kategoride besin yok"}
+            </p>
+          ) : (
+            visibleItems.slice(0, 30).map((d) => {
+              const isSel = !!selected.find((s) => s.id === d.id);
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => toggle(d)}
+                  className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800 ${isSel ? "bg-emerald-50 dark:bg-emerald-900/20" : ""}`}
+                >
+                  <span className={`font-medium ${isSel ? "text-emerald-700 dark:text-emerald-300" : "text-slate-800 dark:text-slate-100"}`}>
+                    {isSel && "✓ "}{d.name}
+                  </span>
+                  <span className="shrink-0 text-xs text-slate-400">{d.calories} kcal{d.portion ? ` · ${d.portion}` : ""}</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MealEntryForm({
+  token,
   onSave,
   onCancel,
 }: {
+  token: string;
   onSave: (data: Partial<ProgramMealEntry>) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [form, setForm] = useState({ meal_type: "breakfast", description: "", calories: "" });
+  const [form, setForm] = useState({ meal_type: "sabah", notification_time: "", description: "" });
+  const [selectedItems, setSelectedItems] = useState<DietItem[]>([]);
   const [saving, setSaving] = useState(false);
 
+  const totalCalories = selectedItems.reduce((sum, d) => sum + (d.calories || 0), 0);
+
   const handle = async () => {
-    if (!form.description.trim()) return;
+    if (selectedItems.length === 0 && !form.description.trim()) return;
     setSaving(true);
     try {
       await onSave({
         meal_type: form.meal_type as ProgramMealEntry["meal_type"],
+        notification_time: form.notification_time || null,
+        diet_item_ids: selectedItems.map((d) => d.id),
         description: form.description,
-        calories: form.calories ? Number(form.calories) : null,
+        calories: totalCalories || null,
       });
     } finally { setSaving(false); }
   };
 
   return (
     <div className="space-y-3 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900">
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         <div>
           <label className="mb-1 block text-xs font-semibold text-slate-500">Öğün *</label>
           <CustomSelect
@@ -310,22 +577,35 @@ function MealEntryForm({
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-semibold text-slate-500">Kalori (opsiyonel)</label>
-          <input type="number" min={0} value={form.calories}
-            onChange={(e) => setForm((f) => ({ ...f, calories: e.target.value }))}
-            placeholder="ör: 450 kcal"
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" />
+          <label className="mb-1 block text-xs font-semibold text-slate-500">Bildirim Saati</label>
+          <input
+            type="time"
+            value={form.notification_time}
+            onChange={(e) => setForm((f) => ({ ...f, notification_time: e.target.value }))}
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+          />
         </div>
-        <div className="sm:col-span-2">
-          <label className="mb-1 block text-xs font-semibold text-slate-500">İçerik *</label>
-          <textarea rows={3} value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            placeholder="ör: 2 yumurta, tam buğday ekmek, yeşil salata, zeytinyağı..."
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" />
-        </div>
+        {totalCalories > 0 && (
+          <div className="flex items-end">
+            <span className="rounded-xl bg-amber-100 px-3 py-2 text-sm font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+              {totalCalories} kcal
+            </span>
+          </div>
+        )}
+      </div>
+      <div>
+        <label className="mb-1 block text-xs font-semibold text-slate-500">Besinler (kütüphaneden seç)</label>
+        <DietItemPicker token={token} selected={selectedItems} onChange={setSelectedItems} />
+      </div>
+      <div>
+        <label className="mb-1 block text-xs font-semibold text-slate-500">Ek Not (opsiyonel)</label>
+        <textarea rows={2} value={form.description}
+          onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+          placeholder="Porsiyon notu, hazırlık talimatı…"
+          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" />
       </div>
       <div className="flex gap-2">
-        <button type="button" onClick={handle} disabled={saving || !form.description.trim()}
+        <button type="button" onClick={handle} disabled={saving || (selectedItems.length === 0 && !form.description.trim())}
           className="rounded-xl bg-emerald-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-40">
           {saving ? "…" : "Ekle"}
         </button>
@@ -712,6 +992,7 @@ export default function ProgramlarPage() {
                                     {openId === newItemKey && (
                                       <div className="mb-2">
                                         <ItemForm
+                                          token={token}
                                           exercises={exercises}
                                           onSave={(data) => handleCreateItem(day.id, data)}
                                           onCancel={() => setOpenId(null)}
@@ -752,6 +1033,7 @@ export default function ProgramlarPage() {
                                     {openId === `new-meal-${day.id}` && (
                                       <div className="mb-2">
                                         <MealEntryForm
+                                          token={token}
                                           onSave={(data) => handleCreateMeal(day.id, data)}
                                           onCancel={() => setOpenId(null)}
                                         />
@@ -764,12 +1046,26 @@ export default function ProgramlarPage() {
                                         {day.meal_entries.map((meal) => (
                                           <div key={meal.id} className="flex items-start justify-between rounded-lg bg-orange-50/60 px-3 py-2 dark:bg-orange-950/20">
                                             <div className="flex-1 min-w-0">
-                                              <div className="flex items-center gap-1.5 mb-0.5">
+                                              <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                                                 <span className="text-sm">{MEAL_TYPE_EMOJI[meal.meal_type]}</span>
                                                 <span className="text-xs font-bold text-orange-700 dark:text-orange-400">{meal.meal_type_label}</span>
+                                                {meal.notification_time && (
+                                                  <span className="flex items-center gap-0.5 text-xs text-slate-500 dark:text-slate-400">
+                                                    🕐 {meal.notification_time.slice(0, 5)}
+                                                  </span>
+                                                )}
                                                 {meal.calories && <span className="text-xs text-slate-400">{meal.calories} kcal</span>}
                                               </div>
-                                              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{meal.description}</p>
+                                              {meal.diet_items && meal.diet_items.length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-0.5">
+                                                  {meal.diet_items.map((di) => (
+                                                    <span key={di.id} className="rounded-full bg-white/80 border border-orange-200 px-2 py-0.5 text-[10px] font-medium text-orange-700 dark:bg-slate-800 dark:border-orange-800/40 dark:text-orange-400">
+                                                      {di.name} · {di.calories} kcal
+                                                    </span>
+                                                  ))}
+                                                </div>
+                                              )}
+                                              {meal.description && <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mt-0.5">{meal.description}</p>}
                                             </div>
                                             <button type="button" onClick={() => handleDeleteMeal(meal)}
                                               className="ml-3 shrink-0 rounded-lg bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-500 hover:bg-red-100">

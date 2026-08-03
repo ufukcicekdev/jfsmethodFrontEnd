@@ -637,6 +637,28 @@ function ProgramsTab({ notify }: { notify: (t: string, ok?: boolean) => void }) 
 
       {/* Main */}
       <div className="min-w-0 flex-1 space-y-4">
+        {/* Mobile category strip */}
+        {categories.length > 0 && (
+          <div className="lg:hidden -mx-1 overflow-x-auto pb-1">
+            <div className="flex gap-2 px-1">
+              <button type="button" onClick={() => setSelectedCategoryId(null)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${selectedCategoryId === null ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"}`}>
+                Tümü
+              </button>
+              {flattenCategories(categories).map((opt) => (
+                <button key={opt.value} type="button" onClick={() => setSelectedCategoryId(Number(opt.value))}
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${selectedCategoryId === Number(opt.value) ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"}`}>
+                  {opt.label.trim()}
+                </button>
+              ))}
+              <button type="button" title="Kök kategori ekle" onClick={() => setCatDialog({ mode: "add-root" })}
+                className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full bg-blue-500 text-white hover:bg-blue-600">
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+              </button>
+            </div>
+          </div>
+        )}
+
       <div className="flex justify-end">
         <button onClick={openCreate} className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-600">
           + Yeni Program
