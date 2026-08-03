@@ -187,6 +187,7 @@ export interface Appointment {
 export interface PackagePlan {
   id: number;
   name: string;
+  session_type: "group" | "private";
   total_sessions: number;
   price: string;
   description: string;

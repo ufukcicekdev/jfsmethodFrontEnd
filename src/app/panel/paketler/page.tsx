@@ -20,6 +20,7 @@ function formatPrice(value: string | number) {
 
 const EMPTY_FORM = {
   name: "",
+  session_type: "group" as "group" | "private",
   total_sessions: "12",
   price: "",
   description: "",
@@ -66,6 +67,7 @@ export default function PackagePlansPage() {
     setEditingId(plan.id);
     setForm({
       name: plan.name,
+      session_type: plan.session_type ?? "group",
       total_sessions: String(plan.total_sessions),
       price: String(Number(plan.price)),
       description: plan.description,
@@ -93,6 +95,7 @@ export default function PackagePlansPage() {
     setMessage(null);
     const payload = {
       name: form.name.trim(),
+      session_type: form.session_type,
       total_sessions: total,
       price: form.price.trim() === "" ? 0 : Number(form.price),
       description: form.description,
@@ -215,8 +218,15 @@ export default function PackagePlansPage() {
                       </span>
                     )}
                   </p>
-                  <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
-                    {plan.total_sessions} seans · {formatPrice(plan.price)}
+                  <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                    <span>{plan.total_sessions} seans · {formatPrice(plan.price)}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                      plan.session_type === "private"
+                        ? "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
+                        : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                    }`}>
+                      {plan.session_type === "private" ? "👤 Özel Ders" : "🧑‍🤝‍🧑 Grup"}
+                    </span>
                   </p>
                 </div>
               </div>
@@ -266,6 +276,27 @@ export default function PackagePlansPage() {
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           />
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Ders Türü</label>
+            <div className="flex gap-3">
+              {(["group", "private"] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, session_type: type }))}
+                  className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
+                    form.session_type === type
+                      ? type === "private"
+                        ? "border-purple-500 bg-purple-500 text-white"
+                        : "border-blue-500 bg-blue-500 text-white"
+                      : "border-slate-300/60 text-slate-600 hover:bg-slate-50 dark:border-slate-600/60 dark:text-slate-300 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  {type === "group" ? "🧑‍🤝‍🧑 Grup Dersi" : "👤 Özel Ders"}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               label="Seans Sayısı"
