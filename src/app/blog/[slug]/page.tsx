@@ -4,8 +4,9 @@ import { notFound } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { ShareButtons, SidebarShareIcons } from "./ShareButtons";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://jfsmethod.com";
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://jfsmethod.com/api";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.jfsmethod.com";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://www.jfsmethod.com/api";
+const DEFAULT_OG_IMAGE = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.jfsmethod.com"}/icon-512.png`;
 
 interface BlogPost {
   id: number;
@@ -24,7 +25,7 @@ interface BlogPost {
 async function getPost(slug: string): Promise<BlogPost | null> {
   try {
     const res = await fetch(`${API_URL}/blog/${slug}/`, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 60 },
     });
     if (!res.ok) return null;
     return res.json();
@@ -61,6 +62,10 @@ export async function generateMetadata({
   const excerpt = post.excerpt ?? post.content?.replace(/<[^>]+>/g, " ").slice(0, 160) ?? "";
   const canonicalUrl = `${SITE_URL}/blog/${post.slug}`;
 
+  // cover_image yoksa content içindeki ilk resmi, o da yoksa site logosunu kullan
+  const contentImgMatch = post.content?.match(/src=["']([^"']+)["']/);
+  const ogImage = post.cover_image ?? contentImgMatch?.[1] ?? DEFAULT_OG_IMAGE;
+
   return {
     title: `${post.title} | JFS Method Blog`,
     description: excerpt,
@@ -72,13 +77,13 @@ export async function generateMetadata({
       description: excerpt,
       siteName: "JFS Method",
       publishedTime: post.published_at ?? undefined,
-      ...(post.cover_image ? { images: [{ url: post.cover_image, width: 1200, height: 630 }] } : {}),
+      images: [{ url: ogImage, width: 1200, height: 630 }],
     },
     twitter: {
-      card: post.cover_image ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: post.title,
       description: excerpt,
-      ...(post.cover_image ? { images: [post.cover_image] } : {}),
+      images: [ogImage],
     },
   };
 }
