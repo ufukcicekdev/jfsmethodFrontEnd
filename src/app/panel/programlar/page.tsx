@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { api, type ExerciseProgram, type ExerciseProgramDay, type ExerciseProgramItem, type ProductPackage, type Exercise, type DietProgram } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
@@ -63,20 +64,26 @@ function ProgramForm({
         </div>
         <div>
           <label className="mb-1 block text-xs font-semibold text-slate-500">Tür</label>
-          <select value={form.program_type} onChange={(e) => setForm((f) => ({ ...f, program_type: e.target.value as "weekly" | "sequential" }))}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-            <option value="weekly">Haftalık Plan (Pzt–Paz)</option>
-            <option value="sequential">Sıralı Günler (1. gün, 2. gün…)</option>
-          </select>
+          <CustomSelect
+            value={form.program_type}
+            onChange={(v) => setForm((f) => ({ ...f, program_type: v as "weekly" | "sequential" }))}
+            options={[
+              { value: "weekly", label: "Haftalık Plan (Pzt–Paz)" },
+              { value: "sequential", label: "Sıralı Günler (1. gün, 2. gün…)" },
+            ]}
+          />
         </div>
         <div>
           <label className="mb-1 block text-xs font-semibold text-slate-500">Zorluk</label>
-          <select value={form.difficulty} onChange={(e) => setForm((f) => ({ ...f, difficulty: e.target.value as "easy" | "medium" | "hard" }))}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-            <option value="easy">Kolay</option>
-            <option value="medium">Orta</option>
-            <option value="hard">Zor</option>
-          </select>
+          <CustomSelect
+            value={form.difficulty}
+            onChange={(v) => setForm((f) => ({ ...f, difficulty: v as "easy" | "medium" | "hard" }))}
+            options={[
+              { value: "easy", label: "Kolay" },
+              { value: "medium", label: "Orta" },
+              { value: "hard", label: "Zor" },
+            ]}
+          />
         </div>
         <div>
           <label className="mb-1 block text-xs font-semibold text-slate-500">Süre (hafta)</label>
@@ -135,12 +142,15 @@ function DayForm({
             {programType === "weekly" ? "Gün" : "Gün Numarası"}
           </label>
           {programType === "weekly" ? (
-            <select value={form.day_number} onChange={(e) => setForm((f) => ({ ...f, day_number: Number(e.target.value) }))}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-              {WEEK_DAYS.map((d, i) => (
-                <option key={i} value={i} disabled={existingDayNumbers.includes(i) && initial?.day_number !== i}>{d}</option>
-              ))}
-            </select>
+            <CustomSelect
+              value={form.day_number}
+              onChange={(v) => setForm((f) => ({ ...f, day_number: Number(v) }))}
+              options={WEEK_DAYS.map((d, i) => ({
+                value: i,
+                label: d,
+                disabled: existingDayNumbers.includes(i) && initial?.day_number !== i,
+              }))}
+            />
           ) : (
             <input type="number" min={1} value={form.day_number} onChange={(e) => setForm((f) => ({ ...f, day_number: Number(e.target.value) }))}
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" />
@@ -208,10 +218,12 @@ function ItemForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className="mb-1 block text-xs font-semibold text-slate-500">Egzersiz *</label>
-          <select value={form.exercise} onChange={(e) => setForm((f) => ({ ...f, exercise: Number(e.target.value) }))}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-            {exercises.map((ex) => <option key={ex.id} value={ex.id}>{ex.title}</option>)}
-          </select>
+          <CustomSelect
+            value={form.exercise}
+            onChange={(v) => setForm((f) => ({ ...f, exercise: Number(v) }))}
+            options={exercises.map((ex) => ({ value: ex.id, label: ex.title }))}
+            placeholder="Egzersiz seçin"
+          />
         </div>
         <div>
           <label className="mb-1 block text-xs font-semibold text-slate-500">Set</label>
@@ -300,19 +312,19 @@ function PackageForm({
         </div>
         <div>
           <label className="mb-1 block text-xs font-semibold text-slate-500">Egzersiz Programı</label>
-          <select value={form.exercise_program ?? ""} onChange={(e) => setForm((f) => ({ ...f, exercise_program: e.target.value ? Number(e.target.value) : null }))}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-            <option value="">— Yok —</option>
-            {programs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
+          <CustomSelect
+            value={form.exercise_program ?? ""}
+            onChange={(v) => setForm((f) => ({ ...f, exercise_program: v ? Number(v) : null }))}
+            options={[{ value: "", label: "— Yok —" }, ...programs.map((p) => ({ value: p.id, label: p.name }))]}
+          />
         </div>
         <div>
           <label className="mb-1 block text-xs font-semibold text-slate-500">Diyet Programı</label>
-          <select value={form.diet_program ?? ""} onChange={(e) => setForm((f) => ({ ...f, diet_program: e.target.value ? Number(e.target.value) : null }))}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-            <option value="">— Yok —</option>
-            {dietPrograms.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
-          </select>
+          <CustomSelect
+            value={form.diet_program ?? ""}
+            onChange={(v) => setForm((f) => ({ ...f, diet_program: v ? Number(v) : null }))}
+            options={[{ value: "", label: "— Yok —" }, ...dietPrograms.map((p) => ({ value: p.id, label: p.title }))]}
+          />
         </div>
         <div>
           <label className="mb-1 block text-xs font-semibold text-slate-500">Fiyat (₺) — bilgi amaçlı</label>
