@@ -36,6 +36,7 @@ export default function PackagePlansPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -61,6 +62,7 @@ export default function PackagePlansPage() {
     setEditingId(null);
     setImageFile(null);
     setImagePreview(null);
+    setShowModal(false);
   };
 
   const startEdit = (plan: PackagePlan) => {
@@ -73,7 +75,12 @@ export default function PackagePlansPage() {
       description: plan.description,
     });
     setImagePreview(plan.image_url ?? null);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    setShowModal(true);
+  };
+
+  const openAdd = () => {
+    resetForm();
+    setShowModal(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,6 +117,7 @@ export default function PackagePlansPage() {
         setMessage({ type: "success", text: "Paket eklendi." });
       }
       resetForm();
+      setShowModal(false);
       load();
     } catch (err) {
       setMessage({
@@ -164,14 +172,23 @@ export default function PackagePlansPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900 sm:text-2xl dark:text-slate-50">
-          Paketler
-        </h1>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-          Seans paketlerini (ad, seans sayısı, fiyat, içerik) burada tanımlayın.
-          Hastalara bu katalogdan paket atanır.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl dark:text-slate-50">
+            Paketler
+          </h1>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            Seans paketlerini (ad, seans sayısı, fiyat, içerik) burada tanımlayın.
+            Hastalara bu katalogdan paket atanır.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={openAdd}
+          className="shrink-0 rounded-full bg-blue-500 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600"
+        >
+          + Yeni Paket
+        </button>
       </div>
 
       {message && (
@@ -263,11 +280,18 @@ export default function PackagePlansPage() {
         </div>
       )}
 
-      <GlassCard className="p-4 sm:p-6">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
-          {editingId ? "Paketi Düzenle" : "Yeni Paket Ekle"}
-        </h2>
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-10 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-200/80 px-5 py-4 dark:border-slate-700/60">
+              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">
+                {editingId ? "Paketi Düzenle" : "Yeni Paket Ekle"}
+              </h2>
+              <button type="button" onClick={resetForm} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
+            </div>
+            <div className="p-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <FormField
             label="Paket Adı"
             name="name"
@@ -367,24 +391,21 @@ export default function PackagePlansPage() {
               disabled={saving}
               className="rounded-full bg-blue-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50"
             >
-              {saving
-                ? "Kaydediliyor…"
-                : editingId
-                  ? "Güncelle"
-                  : "Paket Ekle"}
+              {saving ? "Kaydediliyor…" : editingId ? "Güncelle" : "Paket Ekle"}
             </button>
-            {editingId && (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="rounded-full border border-slate-300/60 px-6 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white dark:border-slate-600/60 dark:text-slate-200"
-              >
-                Vazgeç
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={resetForm}
+              className="rounded-full border border-slate-300/60 px-6 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white dark:border-slate-600/60 dark:text-slate-200"
+            >
+              İptal
+            </button>
           </div>
         </form>
-      </GlassCard>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

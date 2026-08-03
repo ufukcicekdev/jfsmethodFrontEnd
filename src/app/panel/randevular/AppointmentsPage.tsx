@@ -244,6 +244,13 @@ function ListView({
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_BADGE[appt.status]}`}>
                   {STATUS_LABELS[appt.status]}
                 </span>
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                  appt.is_private
+                    ? "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
+                    : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                }`}>
+                  {appt.is_private ? "👤 Özel" : "🧑‍🤝‍🧑 Grup"}
+                </span>
               </div>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{appt.doctor_name}</p>
               <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-200">
@@ -436,6 +443,13 @@ function CalendarView({
                 )}
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_BADGE[selected.status]}`}>
                   {STATUS_LABELS[selected.status]}
+                </span>
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                  selected.is_private
+                    ? "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
+                    : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                }`}>
+                  {selected.is_private ? "👤 Özel Ders" : "🧑‍🤝‍🧑 Grup Dersi"}
                 </span>
               </div>
               <p className="text-sm text-slate-500 mt-0.5">{selected.doctor_name}</p>

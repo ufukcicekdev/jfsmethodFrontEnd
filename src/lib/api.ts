@@ -182,6 +182,7 @@ export interface Appointment {
     | "no_show";
   note: string;
   cancellation_reason?: string;
+  is_private: boolean;
 }
 
 export interface PackagePlan {
