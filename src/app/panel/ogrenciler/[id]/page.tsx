@@ -77,7 +77,7 @@ export default function StudentDetailPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [newWeight, setNewWeight] = useState("");
-  const [activeTab, setActiveTab] = useState<"profil" | "egzersizler" | "paketler" | "postur" | "olcumler" | "diyet" | "onboarding">("profil");
+  const [activeTab, setActiveTab] = useState<"profil" | "egzersizler" | "paketler" | "postur" | "olcumler" | "diyet" | "onboarding" | "aktivite">("profil");
   const [newPassword, setNewPassword] = useState("");
   const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
@@ -277,9 +277,10 @@ export default function StudentDetailPage() {
       )}
 
       <div className="flex flex-wrap gap-1 rounded-2xl border border-white/30 bg-white/40 p-1 backdrop-blur-md dark:border-slate-600/40 dark:bg-slate-900/40">
-        {(["profil", "egzersizler", "paketler", "postur", "olcumler", "diyet", "onboarding"] as const).map((tab) => {
+        {(["profil", "aktivite", "egzersizler", "paketler", "postur", "olcumler", "diyet", "onboarding"] as const).map((tab) => {
           const labels: Record<string, string> = {
             profil: "Profil",
+            aktivite: "Aktivite",
             egzersizler: "Egzersizler",
             paketler: "Paketler",
             postur: "Postür & Fotoğraf",
@@ -429,9 +430,96 @@ export default function StudentDetailPage() {
         <PatientDietSection patientId={id} onMessage={showMessage} />
       )}
 
+      {activeTab === "aktivite" && (
+        <PatientAktiviteTab patientId={id} />
+      )}
+
       {activeTab === "onboarding" && (
         <PatientOnboardingTab patientId={id} completed={patient?.onboarding_completed ?? false} />
       )}
+    </div>
+  );
+}
+
+function PatientAktiviteTab({ patientId }: { patientId: number }) {
+  const [history, setHistory] = useState<{ date: string; water_ml: number; steps: number; exercises_done: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const token = getAccessToken()!;
+
+  useEffect(() => {
+    api.admin.patientWellnessHistory(token, patientId, 14)
+      .then((d) => setHistory(d.history))
+      .finally(() => setLoading(false));
+  }, [patientId]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <div className="h-7 w-7 animate-spin rounded-full border-2 border-blue-200 border-t-blue-500" />
+      </div>
+    );
+  }
+
+  const totalWater = history.reduce((s, d) => s + d.water_ml, 0);
+  const totalSteps = history.reduce((s, d) => s + d.steps, 0);
+  const totalExercises = history.reduce((s, d) => s + d.exercises_done, 0);
+  const activeDays = history.filter((d) => d.exercises_done > 0 || d.steps > 0 || d.water_ml > 0).length;
+
+  return (
+    <div className="space-y-4">
+      {/* Özet kartları */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          { label: "Toplam Su", value: totalWater > 0 ? `${(totalWater / 1000).toFixed(1)}L` : "—", icon: "💧", color: "text-blue-600 dark:text-blue-400" },
+          { label: "Toplam Adım", value: totalSteps > 0 ? totalSteps.toLocaleString("tr-TR") : "—", icon: "👟", color: "text-violet-600 dark:text-violet-400" },
+          { label: "Egzersiz", value: totalExercises > 0 ? `${totalExercises} seans` : "—", icon: "✅", color: "text-emerald-600 dark:text-emerald-400" },
+          { label: "Aktif Gün", value: `${activeDays} / 14`, icon: "📅", color: "text-amber-600 dark:text-amber-400" },
+        ].map((c) => (
+          <GlassCard key={c.label} className="p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span>{c.icon}</span>
+              <p className="text-xs text-slate-400 uppercase tracking-wide">{c.label}</p>
+            </div>
+            <p className={`text-xl font-bold ${c.color}`}>{c.value}</p>
+          </GlassCard>
+        ))}
+      </div>
+
+      {/* Günlük tablo */}
+      <GlassCard className="overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200/60 dark:border-slate-700/50">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Son 14 Gün Detayı</h3>
+        </div>
+        <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+          {[...history].reverse().map((d) => {
+            const hasData = d.water_ml > 0 || d.steps > 0 || d.exercises_done > 0;
+            const dateLabel = new Date(d.date).toLocaleDateString("tr-TR", { day: "numeric", month: "short", weekday: "short" });
+            return (
+              <div key={d.date} className={`grid grid-cols-4 gap-2 px-5 py-3 text-sm ${!hasData ? "opacity-40" : ""}`}>
+                <p className="text-slate-500 dark:text-slate-400 text-xs font-medium">{dateLabel}</p>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm">💧</span>
+                  <span className="text-slate-700 dark:text-slate-200 text-xs">
+                    {d.water_ml > 0 ? `${(d.water_ml / 1000).toFixed(1)}L` : "—"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm">👟</span>
+                  <span className="text-slate-700 dark:text-slate-200 text-xs">
+                    {d.steps > 0 ? d.steps.toLocaleString("tr-TR") : "—"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm">✅</span>
+                  <span className={`text-xs font-medium ${d.exercises_done > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>
+                    {d.exercises_done > 0 ? `${d.exercises_done} egzersiz` : "—"}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </GlassCard>
     </div>
   );
 }

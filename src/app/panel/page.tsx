@@ -38,7 +38,7 @@ export default function PanelDashboardPage() {
     {
       label: "Bugün Tamamlanan Egzersiz",
       value: stats?.completions_today ?? 0,
-      href: "/panel/ogrenciler",
+      href: "/panel/ogrenciler?filter=completed_today",
       color: "text-violet-600 dark:text-violet-400",
       icon: "✅",
       sub: stats
@@ -51,7 +51,7 @@ export default function PanelDashboardPage() {
     {
       label: "Bu Hafta Tamamlanan",
       value: stats?.completions_this_week ?? 0,
-      href: "/panel/ogrenciler",
+      href: "/panel/ogrenciler?filter=completed_week",
       color: "text-amber-600 dark:text-amber-400",
       icon: "📈",
     },

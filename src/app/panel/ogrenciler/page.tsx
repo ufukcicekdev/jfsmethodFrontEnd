@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { FormInput } from "@/components/ui/FormField";
@@ -219,7 +220,16 @@ function AttendanceBar({
   );
 }
 
+const FILTER_LABELS: Record<string, string> = {
+  completed_today: "Bugün Egzersiz Tamamlayanlar",
+  completed_week: "Bu Hafta Egzersiz Tamamlayanlar",
+};
+
 export default function StudentsPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const activeFilter = searchParams.get("filter") ?? "";
+
   const [patients, setPatients] = useState<AdminPatient[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
@@ -235,13 +245,13 @@ export default function StudentsPage() {
     if (!token) return;
     setLoading(true);
     api.admin
-      .patients(token, search.trim() || undefined, p, PAGE_SIZE)
+      .patients(token, search.trim() || undefined, p, PAGE_SIZE, activeFilter || undefined)
       .then((data) => { setPatients(data.results); setTotal(data.count); })
       .catch(() => setError("Öğrenciler yüklenemedi."))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { setPage(1); }, [search, activeFilter]);
 
   useEffect(() => {
     const timer = setTimeout(() => loadPatients(page), 300);
@@ -280,6 +290,21 @@ export default function StudentsPage() {
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
             Kayıtlı öğrencileri görüntüleyin, profil ve kilo takibini yönetin.
           </p>
+          {activeFilter && FILTER_LABELS[activeFilter] && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
+                {FILTER_LABELS[activeFilter]}
+              </span>
+              <button
+                type="button"
+                onClick={() => router.push("/panel/ogrenciler")}
+                className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                ✕ Filtreyi kaldır
+              </button>
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <DownloadAllReportButton />
@@ -384,6 +409,37 @@ export default function StudentsPage() {
                         <p className="font-medium text-slate-700 dark:text-slate-200">
                           {formatDate(patient.last_attended)}
                         </p>
+                      </div>
+                    </div>
+
+                    {/* Bugünkü aktivite özeti */}
+                    <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50/80 px-3 py-2.5 dark:bg-slate-800/40">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-base">💧</span>
+                        <div>
+                          <p className="text-[10px] text-slate-400">Su</p>
+                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                            {patient.today_water_ml > 0 ? `${(patient.today_water_ml / 1000).toFixed(1)}L` : "—"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-base">👟</span>
+                        <div>
+                          <p className="text-[10px] text-slate-400">Adım</p>
+                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                            {patient.today_steps > 0 ? patient.today_steps.toLocaleString("tr-TR") : "—"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-base">✅</span>
+                        <div>
+                          <p className="text-[10px] text-slate-400">Egzersiz</p>
+                          <p className={`text-xs font-semibold ${patient.today_exercises_done > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-700 dark:text-slate-200"}`}>
+                            {patient.today_exercises_done > 0 ? `${patient.today_exercises_done} tamamlandı` : "—"}
+                          </p>
+                        </div>
                       </div>
                     </div>
 

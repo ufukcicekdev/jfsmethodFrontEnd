@@ -483,6 +483,9 @@ export interface AdminPatient {
   came_count: number;
   today_attendance: { id: number; status: "came" | "no_show"; package_id?: number | null } | null;
   active_packages: { id: number; name: string; remaining: number }[];
+  today_water_ml: number;
+  today_steps: number;
+  today_exercises_done: number;
   phone?: string;
   date_of_birth?: string | null;
   admin_notes?: string;
@@ -1065,9 +1068,10 @@ export const api = {
     dashboard: (token: string) =>
       apiFetch<AdminDashboard>("/admin/dashboard/", { token }),
 
-    patients: async (token: string, search?: string, page = 1, pageSize = 20) => {
+    patients: async (token: string, search?: string, page = 1, pageSize = 20, filter?: string) => {
       const q = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
       if (search) q.set("search", search);
+      if (filter) q.set("filter", filter);
       return apiFetch<PaginatedResponse<AdminPatient>>(`/admin/patients/?${q}`, { token });
     },
 
@@ -1400,6 +1404,23 @@ export const api = {
 
     sendNotification: (token: string, data: { title: string; body: string; patient_ids?: number[] }) =>
       apiFetch<{ sent_to: number }>("/admin/notifications/send/", { token, method: "POST", body: JSON.stringify(data) }),
+
+    notificationTemplates: (token: string) =>
+      apiFetch<{ id: number; title: string; body: string }[]>("/admin/notifications/templates/", { token }),
+
+    createNotificationTemplate: (token: string, data: { title: string; body: string }) =>
+      apiFetch<{ id: number; title: string; body: string }>("/admin/notifications/templates/", { token, method: "POST", body: JSON.stringify(data) }),
+
+    updateNotificationTemplate: (token: string, id: number, data: { title: string; body: string }) =>
+      apiFetch<{ id: number; title: string; body: string }>(`/admin/notifications/templates/${id}/`, { token, method: "PUT", body: JSON.stringify(data) }),
+
+    deleteNotificationTemplate: (token: string, id: number) =>
+      apiFetch<void>(`/admin/notifications/templates/${id}/`, { token, method: "DELETE" }),
+
+    patientWellnessHistory: (token: string, id: number, days = 14) =>
+      apiFetch<{ history: { date: string; water_ml: number; steps: number; exercises_done: number }[] }>(
+        `/wellness/patients/${id}/wellness-history/?days=${days}`, { token }
+      ),
 
     exerciseLibrary: (token: string) =>
       apiFetch<Exercise[]>("/admin/exercises/", { token }),
