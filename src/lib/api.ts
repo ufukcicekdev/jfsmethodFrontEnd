@@ -1068,10 +1068,11 @@ export const api = {
     dashboard: (token: string) =>
       apiFetch<AdminDashboard>("/admin/dashboard/", { token }),
 
-    patients: async (token: string, search?: string, page = 1, pageSize = 20, filter?: string) => {
+    patients: async (token: string, search?: string, page = 1, pageSize = 20, filter?: string, date?: string) => {
       const q = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
       if (search) q.set("search", search);
       if (filter) q.set("filter", filter);
+      if (date) q.set("date", date);
       return apiFetch<PaginatedResponse<AdminPatient>>(`/admin/patients/?${q}`, { token });
     },
 

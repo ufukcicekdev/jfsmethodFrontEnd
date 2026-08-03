@@ -220,15 +220,13 @@ function AttendanceBar({
   );
 }
 
-const FILTER_LABELS: Record<string, string> = {
-  completed_today: "Bugün Egzersiz Tamamlayanlar",
-  completed_week: "Bu Hafta Egzersiz Tamamlayanlar",
-};
+const todayStr = new Date().toISOString().slice(0, 10);
 
 export default function StudentsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const activeFilter = searchParams.get("filter") ?? "";
+  const activeDate = searchParams.get("date") ?? "";
 
   const [patients, setPatients] = useState<AdminPatient[]>([]);
   const [total, setTotal] = useState(0);
@@ -237,6 +235,7 @@ export default function StudentsPage() {
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [page, setPage] = useState(1);
+  const [dateInput, setDateInput] = useState(activeDate || todayStr);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -244,20 +243,28 @@ export default function StudentsPage() {
     const token = getAccessToken();
     if (!token) return;
     setLoading(true);
+    const date = activeFilter === "completed_date" ? activeDate : undefined;
     api.admin
-      .patients(token, search.trim() || undefined, p, PAGE_SIZE, activeFilter || undefined)
+      .patients(token, search.trim() || undefined, p, PAGE_SIZE, activeFilter || undefined, date || undefined)
       .then((data) => { setPatients(data.results); setTotal(data.count); })
       .catch(() => setError("Öğrenciler yüklenemedi."))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { setPage(1); }, [search, activeFilter]);
+  const applyFilter = (filter: string, date?: string) => {
+    const params = new URLSearchParams();
+    if (filter) params.set("filter", filter);
+    if (date) params.set("date", date);
+    router.push(`/panel/ogrenciler${params.toString() ? `?${params}` : ""}`);
+  };
+
+  useEffect(() => { setPage(1); }, [search, activeFilter, activeDate]);
 
   useEffect(() => {
-    const timer = setTimeout(() => loadPatients(page), 300);
+    const timer = setTimeout(() => loadPatients(page), 150);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, page]);
+  }, [search, page, activeFilter, activeDate]);
 
   const handleMarked = (patientId: number, newStatus: "came" | "no_show" | null) => {
     setPatients((prev) =>
@@ -290,21 +297,6 @@ export default function StudentsPage() {
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
             Kayıtlı öğrencileri görüntüleyin, profil ve kilo takibini yönetin.
           </p>
-          {activeFilter && FILTER_LABELS[activeFilter] && (
-            <div className="mt-2 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
-                {FILTER_LABELS[activeFilter]}
-              </span>
-              <button
-                type="button"
-                onClick={() => router.push("/panel/ogrenciler")}
-                className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-              >
-                ✕ Filtreyi kaldır
-              </button>
-            </div>
-          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <DownloadAllReportButton />
@@ -322,7 +314,7 @@ export default function StudentsPage() {
         <AdminCreatePatientForm onCreated={() => loadPatients(1)} onClose={() => setShowCreate(false)} />
       )}
 
-      <GlassCard className="p-4 sm:p-6">
+      <GlassCard className="p-4 sm:p-6 space-y-3">
         <FormInput
           type="search"
           placeholder="Ad, kullanıcı adı veya e-posta ile ara…"
@@ -330,6 +322,62 @@ export default function StudentsPage() {
           onChange={(e) => setSearch(e.target.value)}
           aria-label="Öğrenci ara"
         />
+
+        {/* Egzersiz filtresi */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Egzersiz:</span>
+          {[
+            { label: "Tümü", value: "" },
+            { label: "Bugün", value: "completed_today" },
+            { label: "Bu Hafta", value: "completed_week" },
+            { label: "Tarihe Göre", value: "completed_date" },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => applyFilter(opt.value, opt.value === "completed_date" ? dateInput : undefined)}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+                activeFilter === opt.value
+                  ? "bg-violet-500 text-white shadow-sm"
+                  : "border border-slate-200 text-slate-600 hover:border-violet-300 hover:text-violet-600 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-500 dark:hover:text-violet-400"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+
+          {/* Tarih picker — sadece "Tarihe Göre" seçiliyken */}
+          {activeFilter === "completed_date" && (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={dateInput}
+                max={todayStr}
+                onChange={(e) => {
+                  setDateInput(e.target.value);
+                  applyFilter("completed_date", e.target.value);
+                }}
+                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+              />
+            </div>
+          )}
+
+          {activeFilter && (
+            <button
+              type="button"
+              onClick={() => applyFilter("")}
+              className="ml-1 text-xs text-slate-400 hover:text-red-500 transition-colors"
+            >
+              ✕ Temizle
+            </button>
+          )}
+
+          {activeFilter && (
+            <span className="ml-auto text-xs text-slate-400">
+              {total} öğrenci bulundu
+            </span>
+          )}
+        </div>
       </GlassCard>
 
       {error && (
