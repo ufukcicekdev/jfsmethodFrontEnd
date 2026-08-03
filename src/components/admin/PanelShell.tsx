@@ -7,12 +7,14 @@ import { FluidBackground } from "@/components/layout/FluidBackground";
 import { NotificationBell } from "@/components/admin/NotificationBell";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { DarkModeToggle } from "@/components/ui/DarkModeToggle";
-import { isStaffUser } from "@/lib/auth";
+import { isStaffUser, getAccessToken } from "@/lib/auth";
+import { api } from "@/lib/api";
 
 const NAV_ITEMS = [
   {
     href: "/panel",
     label: "Genel Bakış",
+    slug: null, // always visible
     exact: true,
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -23,6 +25,7 @@ const NAV_ITEMS = [
   {
     href: "/panel/ogrenciler",
     label: "Öğrenciler",
+    slug: "ogrenciler",
     exact: false,
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -32,6 +35,7 @@ const NAV_ITEMS = [
   },
   {
     href: "/panel/randevular",
+    slug: "randevular",
     label: "Randevular",
     exact: false,
     icon: (
@@ -42,6 +46,7 @@ const NAV_ITEMS = [
   },
   {
     href: "/panel/calisma-programi",
+    slug: "calisma-programi",
     label: "Randevu Yönetimi",
     exact: false,
     icon: (
@@ -52,6 +57,7 @@ const NAV_ITEMS = [
   },
   {
     href: "/panel/egzersizler",
+    slug: "egzersizler",
     label: "Egzersizler",
     exact: false,
     icon: (
@@ -62,6 +68,7 @@ const NAV_ITEMS = [
   },
   {
     href: "/panel/programlar",
+    slug: "programlar",
     label: "Programlar",
     exact: false,
     icon: (
@@ -72,6 +79,7 @@ const NAV_ITEMS = [
   },
   {
     href: "/panel/paketler",
+    slug: "paketler",
     label: "Paketler",
     exact: false,
     icon: (
@@ -82,6 +90,7 @@ const NAV_ITEMS = [
   },
   {
     href: "/panel/mesajlar",
+    slug: "mesajlar",
     label: "Mesajlar",
     exact: false,
     icon: (
@@ -92,6 +101,7 @@ const NAV_ITEMS = [
   },
   {
     href: "/panel/diyet",
+    slug: "diyet",
     label: "Diyet",
     exact: false,
     icon: (
@@ -102,6 +112,7 @@ const NAV_ITEMS = [
   },
   {
     href: "/panel/bildirim-gonder",
+    slug: "bildirim-gonder",
     label: "Bildirim Gönder",
     exact: false,
     icon: (
@@ -112,6 +123,7 @@ const NAV_ITEMS = [
   },
   {
     href: "/panel/bildirim-zamanlama",
+    slug: "bildirim-zamanlama",
     label: "Bildirim Zamanlama",
     exact: false,
     icon: (
@@ -122,6 +134,7 @@ const NAV_ITEMS = [
   },
   {
     href: "/panel/onboarding",
+    slug: "onboarding",
     label: "Onboarding",
     exact: false,
     icon: (
@@ -132,6 +145,7 @@ const NAV_ITEMS = [
   },
   {
     href: "/panel/blog",
+    slug: "blog",
     label: "Blog",
     exact: false,
     icon: (
@@ -142,6 +156,7 @@ const NAV_ITEMS = [
   },
   {
     href: "/panel/sistem-loglari",
+    slug: "sistem-loglari",
     label: "Sistem Logları",
     exact: false,
     icon: (
@@ -152,12 +167,24 @@ const NAV_ITEMS = [
   },
   {
     href: "/panel/ayarlar",
+    slug: "ayarlar",
     label: "Ayarlar",
     exact: false,
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
+  {
+    href: "/panel/kullanici-yonetimi",
+    slug: "kullanici-yonetimi",
+    label: "Kullanıcı Yönetimi",
+    exact: false,
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
       </svg>
     ),
   },
@@ -202,16 +229,25 @@ function MenuIcon({ open }: { open: boolean }) {
 function SidebarContent({
   user,
   pathname,
+  allowedSections,
   onNavigate,
   onLogout,
 }: {
   user: { full_name: string };
   pathname: string;
+  allowedSections: string[] | null; // null = superuser (all access)
   onNavigate?: () => void;
   onLogout: () => void;
 }) {
   const isActive = (href: string, exact: boolean) =>
     exact ? pathname === href : pathname.startsWith(href);
+
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (!item.slug) return true; // Genel Bakış always visible
+    if (allowedSections === null) return true; // superuser
+    if (allowedSections.length === 0) return true; // no restriction
+    return allowedSections.includes(item.slug);
+  });
 
   return (
     <>
@@ -230,7 +266,7 @@ function SidebarContent({
       </p>
 
       <nav className="mt-6 space-y-1">
-        {NAV_ITEMS.map((item) => (
+        {visibleItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
@@ -277,6 +313,16 @@ export function PanelShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { user, loading, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // null = superuser (no restriction), [] = no restriction set, [...] = restricted list
+  const [allowedSections, setAllowedSections] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    const token = getAccessToken();
+    if (!token) return;
+    api.admin.adminSections(token).then((data) => {
+      setAllowedSections(data.is_superuser ? null : data.allowed_sections);
+    }).catch(() => {});
+  }, [user]);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -364,6 +410,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
               <SidebarContent
                 user={user}
                 pathname={pathname}
+                allowedSections={allowedSections}
                 onNavigate={() => setMobileMenuOpen(false)}
                 onLogout={handleLogout}
               />
@@ -379,6 +426,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
                 <SidebarContent
                   user={user}
                   pathname={pathname}
+                  allowedSections={allowedSections}
                   onLogout={handleLogout}
                 />
               </div>

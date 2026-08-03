@@ -185,6 +185,19 @@ export interface Appointment {
   is_private: boolean;
 }
 
+export interface AdminUser {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_superuser: boolean;
+  is_active: boolean;
+  date_joined: string;
+  allowed_sections: string[];
+  password?: string;
+}
+
 export interface PackagePlan {
   id: number;
   name: string;
@@ -2143,6 +2156,18 @@ export const api = {
       q.set("page_size", String(params?.pageSize ?? 25));
       return apiFetch<PaginatedResponse<AuditLog>>(`/admin/audit-logs/?${q.toString()}`, { token });
     },
+
+    // Admin user management
+    adminUsers: (token: string) =>
+      apiFetch<AdminUser[]>("/admin/admin-users/", { token }),
+    createAdminUser: (token: string, data: Partial<AdminUser> & { password: string }) =>
+      apiFetch<AdminUser>("/admin/admin-users/", { token, method: "POST", body: JSON.stringify(data) }),
+    updateAdminUser: (token: string, id: number, data: Partial<AdminUser> & { password?: string }) =>
+      apiFetch<AdminUser>(`/admin/admin-users/${id}/`, { token, method: "PATCH", body: JSON.stringify(data) }),
+    deleteAdminUser: (token: string, id: number) =>
+      apiFetch<void>(`/admin/admin-users/${id}/`, { token, method: "DELETE" }),
+    adminSections: (token: string) =>
+      apiFetch<{ is_superuser: boolean; allowed_sections: string[] }>("/admin/admin-sections/", { token }),
   },
   myDiets: {
     list: (token: string) => apiFetch<DietPlan[]>("/my-diets/", { token }),
