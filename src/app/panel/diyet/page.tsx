@@ -107,7 +107,7 @@ const smCls = "rounded-xl border border-white/30 bg-white/50 px-3 py-2 text-sm f
 /* ========================================================
    MAIN PAGE
    ======================================================== */
-const EMPTY_FOOD = { name: "", calories: 0, protein: 0, carbs: 0, fat: 0, portion: "", is_active: true };
+const EMPTY_FOOD = { name: "", category_id: null as number | null, calories: 0, protein: 0, carbs: 0, fat: 0, portion: "", is_active: true };
 
 export default function DiyetPage() {
   const confirm = useConfirm();
@@ -730,26 +730,48 @@ function ProgramsTab({ notify }: { notify: (t: string, ok?: boolean) => void }) 
 function LibraryTab({ notify }: { notify: (t: string, ok?: boolean) => void }) {
   const confirm = useConfirm();
   const [items, setItems] = useState<DietItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCatId, setSelectedCatId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(EMPTY_FOOD);
+  const [catDialog, setCatDialog] = useState<{ mode: "add-root" | "add-child" | "rename"; parentId?: number; cat?: Category } | null>(null);
+  const [catDialogName, setCatDialogName] = useState("");
+  const [catSaving, setCatSaving] = useState(false);
 
-  const load = async () => {
+  const loadItems = async () => {
     const token = getAccessToken();
     if (!token) return;
     setLoading(true);
     try { setItems(await api.admin.dietItems.list(token)); }
     finally { setLoading(false); }
   };
+  const loadCats = () => {
+    const token = getAccessToken();
+    if (token) api.admin.categoryTree(token, "food").then(setCategories).catch(() => {});
+  };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadItems(); loadCats(); }, []);
 
-  const openNew = () => { setEditingId(null); setForm(EMPTY_FOOD); setShowForm(true); };
+  // flatten for mobile strip
+  const flatCats = (nodes: Category[], prefix = ""): { value: number; label: string }[] =>
+    nodes.flatMap((n) => [{ value: n.id, label: prefix + n.name }, ...flatCats(n.children, prefix + "  ")]);
+
+  const findCatName = (nodes: Category[], id: number): string | null => {
+    for (const n of nodes) {
+      if (n.id === id) return n.name;
+      const r = findCatName(n.children, id);
+      if (r) return r;
+    }
+    return null;
+  };
+
+  const openNew = () => { setEditingId(null); setForm({ ...EMPTY_FOOD, category_id: selectedCatId }); setShowForm(true); };
   const openEdit = (item: DietItem) => {
     setEditingId(item.id);
-    setForm({ name: item.name, calories: item.calories, protein: Number(item.protein), carbs: Number(item.carbs), fat: Number(item.fat), portion: item.portion, is_active: item.is_active });
+    setForm({ name: item.name, category_id: item.category ?? null, calories: item.calories, protein: Number(item.protein), carbs: Number(item.carbs), fat: Number(item.fat), portion: item.portion, is_active: item.is_active });
     setShowForm(true);
   };
 
@@ -759,9 +781,10 @@ function LibraryTab({ notify }: { notify: (t: string, ok?: boolean) => void }) {
     if (!token || !form.name.trim()) { notify("Besin adı zorunludur.", false); return; }
     setSaving(true);
     try {
-      if (editingId) { await api.admin.dietItems.update(token, editingId, form); notify("Güncellendi."); }
-      else { await api.admin.dietItems.create(token, form); notify("Eklendi."); }
-      setShowForm(false); load();
+      const payload = { ...form };
+      if (editingId) { await api.admin.dietItems.update(token, editingId, payload); notify("Güncellendi."); }
+      else { await api.admin.dietItems.create(token, payload); notify("Eklendi."); }
+      setShowForm(false); loadItems();
     } catch (err) { notify(err instanceof Error ? err.message : "Hata.", false); }
     finally { setSaving(false); }
   };
@@ -771,81 +794,208 @@ function LibraryTab({ notify }: { notify: (t: string, ok?: boolean) => void }) {
     if (!token) return;
     const ok = await confirm({ title: "Besin Sil", message: `"${item.name}" silinecek.`, confirmLabel: "Sil", variant: "danger" });
     if (!ok) return;
-    try { await api.admin.dietItems.delete(token, item.id); notify("Silindi."); load(); }
+    try { await api.admin.dietItems.delete(token, item.id); notify("Silindi."); loadItems(); }
     catch { notify("Silinemedi.", false); }
+  };
+
+  const handleCatSave = async () => {
+    const token = getAccessToken();
+    if (!token || !catDialogName.trim() || !catDialog) return;
+    setCatSaving(true);
+    try {
+      if (catDialog.mode === "rename" && catDialog.cat) {
+        await api.admin.updateCategory(token, catDialog.cat.id, { name: catDialogName.trim() });
+      } else {
+        await api.admin.createCategory(token, { name: catDialogName.trim(), category_type: "food", parent: catDialog.parentId ?? null });
+      }
+      loadCats(); setCatDialog(null); setCatDialogName("");
+    } catch { notify("Kategori kaydedilemedi.", false); }
+    finally { setCatSaving(false); }
+  };
+
+  const handleCatDelete = async (cat: Category) => {
+    const token = getAccessToken();
+    if (!token) return;
+    const ok = await confirm({ title: "Kategori Sil", message: `"${cat.name}" silinecek.`, confirmLabel: "Sil", variant: "danger" });
+    if (!ok) return;
+    try { await api.admin.deleteCategory(token, cat.id); loadCats(); if (selectedCatId === cat.id) setSelectedCatId(null); }
+    catch { notify("Kategori silinemedi.", false); }
   };
 
   const f = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((p) => ({ ...p, [key]: key === "name" || key === "portion" ? e.target.value : Number(e.target.value) }));
 
+  const visibleItems = selectedCatId === null ? items : items.filter((i) => i.category === selectedCatId);
+  const flatCatList = flatCats(categories);
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <button onClick={openNew} className="rounded-full bg-blue-500 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-600">+ Yeni Besin</button>
+    <div className="flex gap-6">
+      {/* Sidebar */}
+      <div className="hidden w-52 shrink-0 lg:block">
+        <GlassCard className="sticky top-4 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Kategoriler</span>
+            <button type="button" onClick={() => { setCatDialog({ mode: "add-root" }); setCatDialogName(""); }}
+              className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white hover:bg-emerald-600">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+            </button>
+          </div>
+          <button type="button" onClick={() => setSelectedCatId(null)}
+            className={`mb-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium transition-colors ${selectedCatId === null ? "bg-emerald-500 text-white" : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700/50"}`}>
+            Tümü
+          </button>
+          {categories.length === 0 ? (
+            <p className="py-3 text-center text-xs text-slate-400">Henüz kategori yok</p>
+          ) : (
+            <CategoryTree nodes={categories} selectedId={selectedCatId} onSelect={setSelectedCatId}
+              onAddChild={(parentId) => { setCatDialog({ mode: "add-child", parentId }); setCatDialogName(""); }}
+              onRename={(cat) => { setCatDialog({ mode: "rename", cat }); setCatDialogName(cat.name); }}
+              onDelete={handleCatDelete} />
+          )}
+        </GlassCard>
       </div>
 
-      {showForm && (
-        <GlassCard className="p-5 sm:p-6">
-          <h2 className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-50">{editingId ? "Besini Düzenle" : "Yeni Besin Ekle"}</h2>
-          <form onSubmit={handleSave} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Besin Adı</label>
-                <input required type="text" value={form.name} onChange={f("name")} placeholder="örn: Yulaf Ezmesi" className={cls} />
-              </div>
-              {([["calories", "Kalori (kcal)"], ["protein", "Protein (g)"], ["carbs", "Karbonhidrat (g)"], ["fat", "Yağ (g)"]] as const).map(([key, label]) => (
-                <div key={key}>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</label>
-                  <input type="number" min={0} step="0.1" value={form[key]} onChange={f(key)} className={cls} />
-                </div>
+      {/* Main */}
+      <div className="min-w-0 flex-1 space-y-4">
+        {/* Mobile category strip */}
+        {categories.length > 0 && (
+          <div className="lg:hidden -mx-1 overflow-x-auto pb-1">
+            <div className="flex gap-2 px-1">
+              <button type="button" onClick={() => setSelectedCatId(null)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${selectedCatId === null ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"}`}>
+                Tümü
+              </button>
+              {flatCatList.map((c) => (
+                <button key={c.value} type="button" onClick={() => setSelectedCatId(c.value)}
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${selectedCatId === c.value ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"}`}>
+                  {c.label.trim()}
+                </button>
               ))}
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Porsiyon</label>
-                <input type="text" value={form.portion} onChange={f("portion")} placeholder="örn: 1 kase (200 g)" className={cls} />
+              <button type="button" onClick={() => { setCatDialog({ mode: "add-root" }); setCatDialogName(""); }}
+                className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white hover:bg-emerald-600">
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {selectedCatId ? <><span className="font-semibold text-slate-700 dark:text-slate-200">{findCatName(categories, selectedCatId)}</span> · </> : ""}
+            {visibleItems.length} besin
+          </p>
+          <button onClick={openNew} className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-600">+ Yeni Besin</button>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-16"><div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-200 border-t-blue-500" /></div>
+        ) : visibleItems.length === 0 ? (
+          <GlassCard className="p-10 text-center"><p className="text-slate-500">{selectedCatId ? "Bu kategoride besin yok." : "Henüz besin eklenmemiş."}</p></GlassCard>
+        ) : (
+          <GlassCard className="overflow-hidden p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b border-slate-200/60 bg-slate-50/80 dark:border-slate-700/50 dark:bg-slate-800/50">
+                  <tr>
+                    {["Besin", "Kategori", "Kalori", "Protein", "Karbonhidrat", "Yağ", "Porsiyon", ""].map((h) => (
+                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200/50 dark:divide-slate-700/40">
+                  {visibleItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30">
+                      <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100 whitespace-nowrap">{item.name}</td>
+                      <td className="px-4 py-3">
+                        {item.category ? (
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                            {findCatName(categories, item.category) ?? "—"}
+                          </span>
+                        ) : <span className="text-slate-400">—</span>}
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-orange-600 dark:text-orange-400 whitespace-nowrap">{item.calories} kcal</td>
+                      <td className="px-4 py-3 text-blue-600 dark:text-blue-400">{item.protein}g</td>
+                      <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400">{item.carbs}g</td>
+                      <td className="px-4 py-3 text-slate-500">{item.fat}g</td>
+                      <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{item.portion || "—"}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <button onClick={() => openEdit(item)} className="rounded-full border border-slate-300/60 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-600/60 dark:text-slate-300 whitespace-nowrap">Düzenle</button>
+                          <button onClick={() => handleDelete(item)} className="rounded-full border border-red-400/40 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 whitespace-nowrap">Sil</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </GlassCard>
+        )}
+      </div>
+
+      {/* Form Modal */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}>
+          <div className="my-8 w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200/60 px-6 py-4 dark:border-slate-700/50">
+              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">{editingId ? "Besini Düzenle" : "Yeni Besin Ekle"}</h2>
+              <button type="button" onClick={() => setShowForm(false)} className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">✕</button>
+            </div>
+            <form onSubmit={handleSave} className="space-y-4 p-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Besin Adı *</label>
+                  <input required type="text" value={form.name} onChange={f("name")} placeholder="örn: Yulaf Ezmesi" className={cls} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Kategori</label>
+                  <CustomSelect
+                    value={form.category_id ?? ""}
+                    onChange={(v) => setForm((p) => ({ ...p, category_id: v ? Number(v) : null }))}
+                    options={[{ value: "", label: "— Kategorisiz —" }, ...flatCatList.map((c) => ({ value: c.value, label: c.label.trim() }))]}
+                  />
+                </div>
+                {([["calories", "Kalori (kcal)"], ["protein", "Protein (g)"], ["carbs", "Karbonhidrat (g)"], ["fat", "Yağ (g)"]] as const).map(([key, label]) => (
+                  <div key={key}>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</label>
+                    <input type="number" min={0} step="0.1" value={form[key]} onChange={f(key)} className={cls} />
+                  </div>
+                ))}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Porsiyon</label>
+                  <input type="text" value={form.portion} onChange={f("portion")} placeholder="örn: 1 kase (200 g)" className={cls} />
+                </div>
+                <div className="sm:col-span-2 flex items-center gap-2">
+                  <input type="checkbox" id="food-active" checked={form.is_active} onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))} className="h-4 w-4 rounded border-slate-300" />
+                  <label htmlFor="food-active" className="text-sm text-slate-700 dark:text-slate-300">Aktif</label>
+                </div>
               </div>
-            </div>
-            <div className="flex gap-2">
-              <button type="submit" disabled={saving} className="rounded-full bg-blue-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50">{saving ? "Kaydediliyor…" : "Kaydet"}</button>
-              <button type="button" onClick={() => setShowForm(false)} className="rounded-full border border-slate-300/60 px-6 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-600/60 dark:text-slate-200">İptal</button>
-            </div>
-          </form>
-        </GlassCard>
+              <div className="flex gap-2">
+                <button type="submit" disabled={saving} className="rounded-full bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-50">{saving ? "Kaydediliyor…" : "Kaydet"}</button>
+                <button type="button" onClick={() => setShowForm(false)} className="rounded-full border border-slate-300/60 px-6 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-600/60 dark:text-slate-200">İptal</button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
-      {loading ? (
-        <div className="flex justify-center py-16"><div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-200 border-t-blue-500" /></div>
-      ) : items.length === 0 ? (
-        <GlassCard className="p-10 text-center"><p className="text-slate-500">Henüz besin eklenmemiş.</p></GlassCard>
-      ) : (
-        <GlassCard className="overflow-hidden p-0">
-          <table className="w-full text-sm">
-            <thead className="border-b border-slate-200/60 bg-slate-50/80 dark:border-slate-700/50 dark:bg-slate-800/50">
-              <tr>
-                {["Besin", "Kalori", "Protein", "Karbonhidrat", "Yağ", "Porsiyon", ""].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200/50 dark:divide-slate-700/40">
-              {items.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30">
-                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{item.name}</td>
-                  <td className="px-4 py-3 font-semibold text-orange-600 dark:text-orange-400">{item.calories} kcal</td>
-                  <td className="px-4 py-3 text-blue-600 dark:text-blue-400">{item.protein}g</td>
-                  <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400">{item.carbs}g</td>
-                  <td className="px-4 py-3 text-slate-500">{item.fat}g</td>
-                  <td className="px-4 py-3 text-slate-500">{item.portion || "—"}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <button onClick={() => openEdit(item)} className="rounded-full border border-slate-300/60 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-600/60 dark:text-slate-300">Düzenle</button>
-                      <button onClick={() => handleDelete(item)} className="rounded-full border border-red-400/40 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400">Sil</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </GlassCard>
+      {/* Category dialog */}
+      {catDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setCatDialog(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-800" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50 mb-4">
+              {catDialog.mode === "rename" ? "Kategoriyi Yeniden Adlandır" : "Yeni Kategori"}
+            </h3>
+            <input autoFocus value={catDialogName} onChange={(e) => setCatDialogName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleCatSave(); }}
+              placeholder="Kategori adı" className={cls + " mb-4"} />
+            <div className="flex justify-end gap-3">
+              <button type="button" onClick={() => setCatDialog(null)} className="rounded-full border border-slate-300/60 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300">İptal</button>
+              <button type="button" disabled={catSaving || !catDialogName.trim()} onClick={handleCatSave}
+                className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{catSaving ? "…" : "Kaydet"}</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
