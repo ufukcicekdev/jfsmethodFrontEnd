@@ -40,8 +40,8 @@ export function AdminCreateAppointmentForm({
     const token = getAccessToken();
     if (!token) return;
     api.admin
-      .patients(token)
-      .then((list) => setPatients(Array.isArray(list) ? list : []))
+      .patients(token, undefined, 1, 200)
+      .then((res) => setPatients(res.results ?? []))
       .catch(() => onMessage("Öğrenci listesi yüklenemedi.", "error"));
   }, [onMessage]);
 
