@@ -5,9 +5,10 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://jfsmethod.com";
 
 async function getBlogPosts(): Promise<{ slug: string; published_at: string | null }[]> {
   try {
-    const res = await fetch(`${API_URL}/blog/`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${API_URL}/blog/?page_size=1000`, { next: { revalidate: 3600 } });
     if (!res.ok) return [];
-    return res.json();
+    const data = await res.json();
+    return Array.isArray(data) ? data : (data.results ?? []);
   } catch {
     return [];
   }
