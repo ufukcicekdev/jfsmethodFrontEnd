@@ -1144,6 +1144,11 @@ export const api = {
         "/packages/penalties/",
         { token }
       ),
+    attendanceHistory: (token: string) =>
+      apiFetch<{ date: string; status: "came" | "no_show"; note: string }[]>(
+        "/packages/attendance-history/",
+        { token }
+      ),
   },
 
   devices: {

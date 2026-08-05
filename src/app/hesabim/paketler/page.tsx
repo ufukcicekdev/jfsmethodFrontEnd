@@ -28,10 +28,12 @@ function formatDate(value: string | null) {
 }
 
 type Penalty = { date: string; note: string; created_at: string };
+type AttendanceEntry = { date: string; status: "came" | "no_show"; note: string };
 
 export default function PatientPackagesPage() {
   const [packages, setPackages] = useState<SessionPackage[]>([]);
   const [penalties, setPenalties] = useState<Penalty[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,10 +42,12 @@ export default function PatientPackagesPage() {
     Promise.all([
       api.packages.me(token),
       api.packages.penalties(token),
+      api.packages.attendanceHistory(token),
     ])
-      .then(([pkgs, pen]) => {
+      .then(([pkgs, pen, att]) => {
         setPackages(pkgs);
         setPenalties(pen);
+        setAttendance(att);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -193,6 +197,38 @@ export default function PatientPackagesPage() {
           </div>
         </GlassCard>
       )}
+      {attendance.length > 0 && (
+        <GlassCard className="p-4 sm:p-6">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">
+            Devam Geçmişi
+          </h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Derse geldiğiniz ve gelmediğiniz günler.
+          </p>
+          <ul className="mt-4 space-y-2">
+            {attendance.map((entry, i) => (
+              <li
+                key={i}
+                className="flex items-center justify-between rounded-xl border border-slate-200/60 px-4 py-2.5 dark:border-slate-700/50"
+              >
+                <span className="text-sm text-slate-700 dark:text-slate-300">
+                  {formatDate(entry.date)}
+                </span>
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                    entry.status === "came"
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+                      : "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300"
+                  }`}
+                >
+                  {entry.status === "came" ? "Geldi" : "Gelmedi"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </GlassCard>
+      )}
+
       {penalties.length > 0 && (
         <GlassCard className="p-4 sm:p-6">
           <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">
