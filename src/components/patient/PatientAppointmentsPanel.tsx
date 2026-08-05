@@ -90,7 +90,7 @@ export function PatientAppointmentsPanel({ compact }: { compact?: boolean }) {
         const active = pkgs.find(
           (p) =>
             p.is_active &&
-            p.remaining_sessions - p.scheduled_count > 0
+            p.remaining_sessions > 0
         );
         setActivePackage(active ?? null);
       })
