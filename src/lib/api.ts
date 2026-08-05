@@ -1289,6 +1289,9 @@ export const api = {
         token,
       }),
 
+    deletePatient: (token: string, id: number) =>
+      apiFetch<void>(`/admin/patients/${id}/`, { method: "DELETE", token }),
+
     addWeight: (token: string, id: number, weight: number) =>
       apiFetch<{ entry: WeightEntry; patient: AdminPatient }>(
         `/admin/patients/${id}/weight/`,

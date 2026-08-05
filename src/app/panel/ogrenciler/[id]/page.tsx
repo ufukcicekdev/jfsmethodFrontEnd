@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { PatientPhotoSection } from "@/components/admin/PatientPhotoSection";
 import { PatientExerciseSection } from "@/components/admin/PatientExerciseSection";
 import { PatientPackageSection } from "@/components/admin/PatientPackageSection";
@@ -69,6 +70,8 @@ function formatDateTime(value: string) {
 
 export default function StudentDetailPage() {
   const params = useParams();
+  const router = useRouter();
+  const confirm = useConfirm();
   const id = Number(params.id);
   const [patient, setPatient] = useState<AdminPatient | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,6 +124,25 @@ export default function StudentDetailPage() {
   useEffect(() => {
     loadPatient();
   }, [loadPatient]);
+
+  const handleDelete = async () => {
+    const token = getAccessToken();
+    if (!token || !patient) return;
+    const ok = await confirm({
+      title: "Öğrenciyi sil",
+      message: `"${patient.full_name}" adlı öğrenci kalıcı olarak silinecek. Randevu ve paket geçmişi de silinir. Emin misiniz?`,
+      confirmLabel: "Evet, sil",
+      cancelLabel: "Vazgeç",
+      variant: "danger",
+    });
+    if (!ok) return;
+    try {
+      await api.admin.deletePatient(token, id);
+      router.push("/panel/ogrenciler");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Öğrenci silinemedi.");
+    }
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,6 +289,13 @@ export default function StudentDetailPage() {
             {patient.weight ? `${patient.weight} kg` : "Kilo yok"}
           </span>
           <DownloadReportButton patientId={id} />
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="rounded-full border border-red-500/50 px-4 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+          >
+            Öğrenciyi Sil
+          </button>
         </div>
       </div>
 
