@@ -276,6 +276,20 @@ export default function OnboardingAdminPage() {
     await load();
   };
 
+  const handleToggleQuestion = async (q: OnboardingQuestion) => {
+    const token = getAccessToken();
+    if (!token) return;
+    await api.admin.onboarding.update(token, q.id, { is_active: !q.is_active });
+    await load();
+  };
+
+  const handleToggleSection = async (s: OnboardingSection) => {
+    const token = getAccessToken();
+    if (!token) return;
+    await api.admin.onboarding.updateSection(token, s.id, { is_active: !s.is_active });
+    await load();
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -331,7 +345,8 @@ export default function OnboardingAdminPage() {
                       {isExpanded ? "▾" : "▸"}
                     </span>
                     <div>
-                      <span className="font-semibold text-slate-900 dark:text-slate-50">{s.title}</span>
+                      <span className={`font-semibold ${s.is_active ? "text-slate-900 dark:text-slate-50" : "text-slate-400 dark:text-slate-500 line-through"}`}>{s.title}</span>
+                      {!s.is_active && <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-700">Pasif</span>}
                       {s.description && (
                         <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">{s.description}</span>
                       )}
@@ -349,6 +364,13 @@ export default function OnboardingAdminPage() {
                       className="rounded-full border border-emerald-400/60 px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
                     >
                       + Soru
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSection(s)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${s.is_active ? "border-amber-300/60 text-amber-600 hover:bg-amber-50 dark:border-amber-700/40 dark:text-amber-400" : "border-emerald-300/60 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-700/40 dark:text-emerald-400"}`}
+                    >
+                      {s.is_active ? "Pasifleştir" : "Aktifleştir"}
                     </button>
                     <button
                       type="button"
@@ -422,6 +444,13 @@ export default function OnboardingAdminPage() {
                                   )}
                                 </div>
                                 <div className="flex shrink-0 gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleQuestion(q)}
+                                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${q.is_active ? "bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-400" : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-400"}`}
+                                  >
+                                    {q.is_active ? "Pasifleştir" : "Aktifleştir"}
+                                  </button>
                                   <button type="button" onClick={() => setOpenId(isEditingQ ? null : qKey)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${isEditingQ ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"}`}>
                                     {isEditingQ ? "Kapat" : "Düzenle"}
                                   </button>
