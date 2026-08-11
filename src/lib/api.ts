@@ -678,6 +678,17 @@ export interface AuditLog {
   created_at: string;
 }
 
+export interface BlogCategory {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  post_count: number;
+}
+
 export interface BlogPost {
   id: number;
   title: string;
@@ -688,6 +699,8 @@ export interface BlogPost {
   is_published: boolean;
   ai_generated: boolean;
   topic: number | null;
+  category: number | null;
+  category_name: string | null;
   published_at: string | null;
   created_at: string;
   updated_at: string;
@@ -2120,6 +2133,16 @@ export const api = {
       },
       generate: (token: string, data: { topic_id?: number; topic?: string }) =>
         apiFetch<BlogPost>("/admin/blog/generate/", { token, method: "POST", body: JSON.stringify(data) }),
+      categories: {
+        list: (token: string) => apiFetch<BlogCategory[]>("/admin/blog/categories/", { token }),
+        create: (token: string, data: { name: string; description?: string; sort_order?: number }) =>
+          apiFetch<BlogCategory>("/admin/blog/categories/", { token, method: "POST", body: JSON.stringify(data) }),
+        update: (token: string, id: number, data: Partial<BlogCategory>) =>
+          apiFetch<BlogCategory>(`/admin/blog/categories/${id}/`, { token, method: "PATCH", body: JSON.stringify(data) }),
+        delete: (token: string, id: number) =>
+          fetch(`${API_BASE}/admin/blog/categories/${id}/`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
+            .then((r) => { if (!r.ok) throw new Error("Silinemedi."); }),
+      },
     },
 
     markAttendance: (token: string, patientId: number, attendanceStatus: "came" | "no_show", date?: string, packageId?: number) =>

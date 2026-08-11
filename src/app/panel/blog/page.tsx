@@ -5,7 +5,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Pagination } from "@/components/ui/Pagination";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { getAccessToken } from "@/lib/auth";
-import { api, type BlogPost, type BlogTopic } from "@/lib/api";
+import { api, type BlogCategory, type BlogPost, type BlogTopic } from "@/lib/api";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 
 const PAGE_SIZE = 20;
@@ -30,7 +30,7 @@ function formatDate(iso: string | null) {
   return new Date(iso).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" });
 }
 
-type Tab = "posts" | "topics" | "generate";
+type Tab = "posts" | "topics" | "categories" | "generate";
 
 export default function AdminBlogPage() {
   const confirm = useConfirm();
@@ -39,13 +39,19 @@ export default function AdminBlogPage() {
   const [postsTotal, setPostsTotal] = useState(0);
   const [postsPage, setPostsPage] = useState(1);
   const [topics, setTopics] = useState<BlogTopic[]>([]);
+  const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   // Post form
   const [showPostForm, setShowPostForm] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
-  const [postForm, setPostForm] = useState({ title: "", content: "", is_published: false });
+  const [postForm, setPostForm] = useState({ title: "", content: "", is_published: false, category: null as number | null });
+
+  // Category form
+  const [catForm, setCatForm] = useState({ name: "", description: "", sort_order: 0 });
+  const [savingCat, setSavingCat] = useState(false);
+  const [editingCat, setEditingCat] = useState<BlogCategory | null>(null);
   const [savingPost, setSavingPost] = useState(false);
 
   // Topic form
@@ -79,13 +85,15 @@ export default function AdminBlogPage() {
     if (!token) return;
     setLoading(true);
     try {
-      const [p, t] = await Promise.all([
+      const [p, t, c] = await Promise.all([
         api.admin.blog.posts.list(token, page, PAGE_SIZE),
         api.admin.blog.topics.list(token),
+        api.admin.blog.categories.list(token),
       ]);
       setPosts(p.results);
       setPostsTotal(p.count);
       setTopics(t);
+      setCategories(c);
     } finally {
       setLoading(false);
     }
@@ -97,7 +105,7 @@ export default function AdminBlogPage() {
 
   const openNewPost = () => {
     setEditingPost(null);
-    setPostForm({ title: "", content: "", is_published: false });
+    setPostForm({ title: "", content: "", is_published: false, category: null });
     setShowPostForm(true);
   };
 
@@ -107,10 +115,10 @@ export default function AdminBlogPage() {
     try {
       const full = await api.admin.blog.posts.get(token, post.id);
       setEditingPost(full);
-      setPostForm({ title: full.title, content: full.content, is_published: full.is_published });
+      setPostForm({ title: full.title, content: full.content, is_published: full.is_published, category: full.category ?? null });
     } catch {
       setEditingPost(post);
-      setPostForm({ title: post.title, content: post.content ?? "", is_published: post.is_published });
+      setPostForm({ title: post.title, content: post.content ?? "", is_published: post.is_published, category: post.category ?? null });
     }
     setShowPostForm(true);
   };
@@ -164,6 +172,52 @@ export default function AdminBlogPage() {
     } catch {
       notify("Silinemedi.", "error");
     }
+  };
+
+  // ── Category actions ──────────────────────────────────────────────────────────
+
+  const saveCat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = getAccessToken();
+    if (!token || !catForm.name.trim()) return;
+    setSavingCat(true);
+    try {
+      if (editingCat) {
+        await api.admin.blog.categories.update(token, editingCat.id, catForm);
+        notify("Kategori güncellendi.", "success");
+      } else {
+        await api.admin.blog.categories.create(token, catForm);
+        notify("Kategori eklendi.", "success");
+      }
+      setCatForm({ name: "", description: "", sort_order: 0 });
+      setEditingCat(null);
+      loadData(postsPage);
+    } catch (err) {
+      notify(err instanceof Error ? err.message : "Hata.", "error");
+    } finally {
+      setSavingCat(false);
+    }
+  };
+
+  const deleteCat = async (cat: BlogCategory) => {
+    const token = getAccessToken();
+    if (!token) return;
+    const ok = await confirm({ title: "Kategoriyi Sil", message: `"${cat.name}" silinecek. Bağlı yazıların kategorisi kaldırılacak.`, confirmLabel: "Sil", variant: "danger" });
+    if (!ok) return;
+    try {
+      await api.admin.blog.categories.delete(token, cat.id);
+      notify("Kategori silindi.", "success");
+      loadData(postsPage);
+    } catch {
+      notify("Silinemedi.", "error");
+    }
+  };
+
+  const toggleCatActive = async (cat: BlogCategory) => {
+    const token = getAccessToken();
+    if (!token) return;
+    await api.admin.blog.categories.update(token, cat.id, { is_active: !cat.is_active });
+    loadData(postsPage);
   };
 
   // ── Topic actions ─────────────────────────────────────────────────────────────
@@ -254,14 +308,14 @@ export default function AdminBlogPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-2xl bg-slate-100/80 p-1 dark:bg-slate-800/50 w-fit">
-        {(["posts", "topics", "generate"] as Tab[]).map((t) => (
+        {(["posts", "topics", "categories", "generate"] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
             className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${tab === t ? "bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}
           >
-            {t === "posts" ? `Yazılar (${postsTotal})` : t === "topics" ? `Konu Kuyruğu (${topics.length})` : "AI Üret"}
+            {t === "posts" ? `Yazılar (${postsTotal})` : t === "topics" ? `Konu Kuyruğu (${topics.length})` : t === "categories" ? `Kategoriler (${categories.length})` : "AI Üret"}
           </button>
         ))}
       </div>
@@ -293,6 +347,19 @@ export default function AdminBlogPage() {
                     onChange={(html) => setPostForm((f) => ({ ...f, content: html }))}
                     placeholder="Yazı içeriğini buraya girin…"
                   />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Kategori</label>
+                  <select
+                    value={postForm.category ?? ""}
+                    onChange={(e) => setPostForm((f) => ({ ...f, category: e.target.value ? Number(e.target.value) : null }))}
+                    className="w-full rounded-xl border border-white/30 bg-white/50 px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-800/50 dark:text-slate-100"
+                  >
+                    <option value="">— Kategori Seçin (opsiyonel) —</option>
+                    {categories.filter((c) => c.is_active).map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
                   <input
@@ -331,6 +398,9 @@ export default function AdminBlogPage() {
                         </span>
                         {post.ai_generated && (
                           <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-[10px] font-semibold text-violet-600 dark:bg-violet-900/40 dark:text-violet-400">AI</span>
+                        )}
+                        {post.category_name && (
+                          <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:bg-blue-900/40 dark:text-blue-300">{post.category_name}</span>
                         )}
                         <span className="text-xs text-slate-400">{formatDate(post.published_at ?? post.created_at)}</span>
                         <span className="text-xs text-slate-400">{post.view_count} görüntülenme</span>
@@ -433,6 +503,104 @@ export default function AdminBlogPage() {
                     <button type="button" onClick={() => deleteTopic(topic)} className="shrink-0 rounded-full border border-red-500/40 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400">
                       Sil
                     </button>
+                  </div>
+                </GlassCard>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── CATEGORIES TAB ── */}
+      {tab === "categories" && (
+        <>
+          <GlassCard className="p-5 sm:p-6">
+            <h2 className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-50">
+              {editingCat ? `"${editingCat.name}" Düzenle` : "Yeni Kategori"}
+            </h2>
+            <form onSubmit={saveCat} className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Kategori Adı *</label>
+                  <input
+                    required
+                    autoFocus
+                    value={catForm.name}
+                    onChange={(e) => setCatForm((f) => ({ ...f, name: e.target.value }))}
+                    placeholder="örn: Egzersiz, Beslenme, Rehabilitasyon…"
+                    className="w-full rounded-xl border border-white/30 bg-white/50 px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-800/50 dark:text-slate-100"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Sıra No</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={catForm.sort_order}
+                    onChange={(e) => setCatForm((f) => ({ ...f, sort_order: Number(e.target.value) }))}
+                    className="w-full rounded-xl border border-white/30 bg-white/50 px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-800/50 dark:text-slate-100"
+                  />
+                </div>
+                <div className="sm:col-span-3">
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Açıklama (opsiyonel)</label>
+                  <input
+                    value={catForm.description}
+                    onChange={(e) => setCatForm((f) => ({ ...f, description: e.target.value }))}
+                    placeholder="Bu kategorinin kısa açıklaması…"
+                    className="w-full rounded-xl border border-white/30 bg-white/50 px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-800/50 dark:text-slate-100"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button type="submit" disabled={savingCat} className="rounded-full bg-blue-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50">
+                  {savingCat ? "Kaydediliyor…" : editingCat ? "Güncelle" : "Ekle"}
+                </button>
+                {editingCat && (
+                  <button type="button" onClick={() => { setEditingCat(null); setCatForm({ name: "", description: "", sort_order: 0 }); }} className="rounded-full border border-slate-300/60 px-6 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-600/60 dark:text-slate-200">
+                    İptal
+                  </button>
+                )}
+              </div>
+            </form>
+          </GlassCard>
+
+          {loading ? (
+            <div className="flex justify-center py-10"><div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-200 border-t-blue-500" /></div>
+          ) : categories.length === 0 ? (
+            <GlassCard className="p-10 text-center"><p className="text-slate-400">Henüz kategori yok.</p></GlassCard>
+          ) : (
+            <div className="space-y-2">
+              {categories.map((cat) => (
+                <GlassCard key={cat.id} className={`p-4 ${!cat.is_active ? "opacity-60" : ""}`}>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-slate-900 dark:text-slate-100">{cat.name}</span>
+                        {!cat.is_active && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-slate-700">Pasif</span>}
+                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">{cat.post_count} yazı</span>
+                      </div>
+                      {cat.description && <p className="mt-0.5 text-xs text-slate-400">{cat.description}</p>}
+                      <p className="mt-0.5 text-[10px] text-slate-400 font-mono">/blog/categories/{cat.slug}</p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleCatActive(cat)}
+                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${cat.is_active ? "border-amber-300/60 text-amber-600 hover:bg-amber-50 dark:text-amber-400" : "border-emerald-300/60 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400"}`}
+                      >
+                        {cat.is_active ? "Pasifleştir" : "Aktifleştir"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setEditingCat(cat); setCatForm({ name: cat.name, description: cat.description, sort_order: cat.sort_order }); }}
+                        className="rounded-full border border-slate-300/60 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600/60 dark:text-slate-200"
+                      >
+                        Düzenle
+                      </button>
+                      <button type="button" onClick={() => deleteCat(cat)} className="rounded-full border border-red-500/40 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400">
+                        Sil
+                      </button>
+                    </div>
                   </div>
                 </GlassCard>
               ))}

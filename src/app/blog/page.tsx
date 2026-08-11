@@ -38,6 +38,15 @@ interface BlogPost {
   created_at: string;
   view_count: number;
   excerpt?: string;
+  category: number | null;
+  category_name: string | null;
+}
+
+interface BlogCategory {
+  id: number;
+  name: string;
+  slug: string;
+  post_count: number;
 }
 
 interface BlogListResponse {
@@ -46,14 +55,25 @@ interface BlogListResponse {
   popular: BlogPost[];
 }
 
-async function getPosts(page: number, sort: string): Promise<BlogListResponse> {
+async function getPosts(page: number, sort: string, category?: string): Promise<BlogListResponse> {
   try {
     const q = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE), sort });
+    if (category) q.set("category", category);
     const res = await fetch(`${API_URL}/blog/?${q}`, { next: { revalidate: 300 } });
     if (!res.ok) return { count: 0, results: [], popular: [] };
     return res.json();
   } catch {
     return { count: 0, results: [], popular: [] };
+  }
+}
+
+async function getCategories(): Promise<BlogCategory[]> {
+  try {
+    const res = await fetch(`${API_URL}/blog/categories/`, { next: { revalidate: 600 } });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
   }
 }
 
@@ -144,6 +164,11 @@ function PostCard({ post }: { post: BlogPost }) {
         </div>
         <div className="flex flex-1 flex-col p-4 sm:p-5">
           <div className="flex flex-wrap items-center gap-1.5 mb-2">
+            {post.category_name && (
+              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-600 dark:bg-blue-900/40 dark:text-blue-300">
+                {post.category_name}
+              </span>
+            )}
             <span className="text-xs text-slate-400 dark:text-slate-500">{formatDate(post.published_at)}</span>
             <span className="text-slate-300 dark:text-slate-600 text-xs">·</span>
             <span className="text-xs text-slate-400 dark:text-slate-500">{readingTime(post.excerpt ?? "")} dk</span>
@@ -167,6 +192,30 @@ function PostCard({ post }: { post: BlogPost }) {
         </div>
       </article>
     </Link>
+  );
+}
+
+// ── Kategori pills ────────────────────────────────────────────────────────────
+function CategoryPills({ categories, active }: { categories: BlogCategory[]; active: string }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Link
+        href="/blog"
+        className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${!active ? "bg-blue-500 text-white" : "border border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"}`}
+      >
+        Tümü
+      </Link>
+      {categories.map((cat) => (
+        <Link
+          key={cat.id}
+          href={`/blog?category=${cat.slug}`}
+          className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${active === cat.slug ? "bg-blue-500 text-white" : "border border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"}`}
+        >
+          {cat.name}
+          {cat.post_count > 0 && <span className="ml-1.5 opacity-60">({cat.post_count})</span>}
+        </Link>
+      ))}
+    </div>
   );
 }
 
@@ -194,10 +243,11 @@ function PopularPost({ post, rank }: { post: BlogPost; rank: number }) {
 }
 
 // ── SSR Pagination links ──────────────────────────────────────────────────────
-function PaginationLinks({ page, totalPages, sort }: { page: number; totalPages: number; sort: string }) {
+function PaginationLinks({ page, totalPages, sort, category }: { page: number; totalPages: number; sort: string; category: string }) {
   if (totalPages <= 1) return null;
 
-  const sortParam = sort !== "newest" ? `&sort=${sort}` : "";
+  const extra = [sort !== "newest" ? `sort=${sort}` : "", category ? `category=${category}` : ""].filter(Boolean).join("&");
+  const sortParam = extra ? `&${extra}` : "";
 
   const pages: (number | "…")[] = [];
   if (totalPages <= 7) {
@@ -239,11 +289,14 @@ function PaginationLinks({ page, totalPages, sort }: { page: number; totalPages:
 export default async function BlogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string; page?: string }>;
+  searchParams: Promise<{ sort?: string; page?: string; category?: string }>;
 }) {
-  const { sort = "newest", page: pageStr } = await searchParams;
+  const { sort = "newest", page: pageStr, category = "" } = await searchParams;
   const page = Math.max(1, parseInt(pageStr ?? "1") || 1);
-  const data = await getPosts(page, sort);
+  const [data, categories] = await Promise.all([
+    getPosts(page, sort, category),
+    getCategories(),
+  ]);
 
   const { count, results, popular } = data;
   const totalPages = Math.ceil(count / PAGE_SIZE);
@@ -297,10 +350,18 @@ export default async function BlogPage({
 
               {/* Sol — yazılar */}
               <div className="space-y-8">
-                {/* Filtre */}
+                {/* Kategori filtreleri */}
+                {categories.length > 0 && (
+                  <CategoryPills categories={categories} active={category} />
+                )}
+
+                {/* Sıralama ve sayaç */}
                 <div className="flex items-center justify-between gap-4">
                   <p className="text-sm text-slate-400 dark:text-slate-500">
                     <span className="font-semibold text-slate-700 dark:text-slate-200">{count}</span> yazı
+                    {category && categories.find(c => c.slug === category) && (
+                      <span className="ml-1 text-blue-600 dark:text-blue-400">· {categories.find(c => c.slug === category)?.name}</span>
+                    )}
                   </p>
                   <Suspense fallback={null}>
                     <FilterTabs />
@@ -328,7 +389,7 @@ export default async function BlogPage({
                 )}
 
                 {/* Pagination */}
-                <PaginationLinks page={page} totalPages={totalPages} sort={sort} />
+                <PaginationLinks page={page} totalPages={totalPages} sort={sort} category={category} />
               </div>
 
               {/* Sağ — sidebar */}
