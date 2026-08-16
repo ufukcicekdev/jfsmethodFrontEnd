@@ -326,6 +326,22 @@ export function PanelShell({ children }: { children: ReactNode }) {
     }).catch(() => {});
   }, [user]);
 
+  // Rota koruması: kısıtlı bir admin yetkisi olmayan bir bölümün URL'sini
+  // elle yazarsa, onu erişebildiği ilk bölüme yönlendir. (Genel Bakış /panel
+  // sayfası kendi içinde ayrıca korunuyor.)
+  useEffect(() => {
+    if (allowedSections === null) return; // superuser veya henüz yüklenmedi
+    if (allowedSections.length === 0) return; // kısıtlama yok
+    const current = NAV_ITEMS.find(
+      (item) =>
+        item.slug &&
+        (item.exact ? pathname === item.href : pathname.startsWith(item.href)),
+    );
+    if (current?.slug && !allowedSections.includes(current.slug)) {
+      router.replace(`/panel/${allowedSections[0]}`);
+    }
+  }, [allowedSections, pathname, router]);
+
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
