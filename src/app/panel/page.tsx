@@ -2,15 +2,37 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { getAccessToken } from "@/lib/auth";
 import { api, type AdminDashboard } from "@/lib/api";
 
 export default function PanelDashboardPage() {
+  const router = useRouter();
   const [stats, setStats] = useState<AdminDashboard | null>(null);
   const [loading, setLoading] = useState(true);
+  const [allowed, setAllowed] = useState(false);
 
   useEffect(() => {
+    const token = getAccessToken();
+    if (!token) return;
+
+    // Genel Bakış'ta öğrenci verileri ve bağlantıları olduğu için
+    // kısıtlı adminleri (belirli bölümlere yetkili) ilk bölümlerine yönlendir.
+    api.admin
+      .adminSections(token)
+      .then((data) => {
+        if (!data.is_superuser && data.allowed_sections.length > 0) {
+          router.replace(`/panel/${data.allowed_sections[0]}`);
+          return;
+        }
+        setAllowed(true);
+      })
+      .catch(() => setAllowed(true));
+  }, [router]);
+
+  useEffect(() => {
+    if (!allowed) return;
     const token = getAccessToken();
     if (!token) return;
 
@@ -18,7 +40,15 @@ export default function PanelDashboardPage() {
       .dashboard(token)
       .then(setStats)
       .finally(() => setLoading(false));
-  }, []);
+  }, [allowed]);
+
+  if (!allowed) {
+    return (
+      <div className="flex justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-200 border-t-blue-500" />
+      </div>
+    );
+  }
 
   const cards = [
     {

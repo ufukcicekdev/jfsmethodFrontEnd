@@ -243,9 +243,11 @@ function SidebarContent({
     exact ? pathname === href : pathname.startsWith(href);
 
   const visibleItems = NAV_ITEMS.filter((item) => {
-    if (!item.slug) return true; // Genel Bakış always visible
     if (allowedSections === null) return true; // superuser
     if (allowedSections.length === 0) return true; // no restriction
+    // Genel Bakış (slug null) sadece kısıtlaması olmayan adminlere gösterilir;
+    // kısıtlı adminler oradan öğrencilere ulaşabildiği için gizlenir.
+    if (!item.slug) return false;
     return allowedSections.includes(item.slug);
   });
 
