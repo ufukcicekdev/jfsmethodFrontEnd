@@ -355,28 +355,42 @@ export function PatientPackageSection({
       </p>
 
       {attendance && (
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatChip
-            label="Geldi"
-            value={attendance.completed}
-            className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-          />
-          <StatChip
-            label="Gelmedi"
-            value={attendance.no_show}
-            className="bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300"
-          />
-          <StatChip
-            label="İptal"
-            value={attendance.cancelled}
-            className="bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
-          />
-          <StatChip
-            label="Yaklaşan"
-            value={attendance.upcoming}
-            className="bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
-          />
-        </div>
+        <>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <StatChip
+              label="Toplam"
+              value={attendance.total_sessions}
+              className="bg-slate-100 text-slate-700 dark:bg-slate-800/60 dark:text-slate-200"
+            />
+            <StatChip
+              label="Geldi"
+              value={attendance.completed}
+              className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+            />
+            <StatChip
+              label="Gelmedi"
+              value={attendance.no_show}
+              className="bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300"
+            />
+            <StatChip
+              label="İptal"
+              value={attendance.cancelled}
+              className="bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+            />
+            <StatChip
+              label="Yaklaşan"
+              value={attendance.upcoming}
+              className="bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+            />
+          </div>
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            Bugüne kadar toplam{" "}
+            <span className="font-semibold text-slate-700 dark:text-slate-200">
+              {attendance.total_came}
+            </span>{" "}
+            seansa geldi.
+          </p>
+        </>
       )}
 
       <div className="mt-6 space-y-3">

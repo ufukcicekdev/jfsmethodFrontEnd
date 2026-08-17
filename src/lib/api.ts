@@ -243,6 +243,8 @@ export interface AttendanceRecord {
 export interface PatientAttendance {
   completed: number;
   no_show: number;
+  total_sessions: number; // aktif paketlerin toplam seans hakkı
+  total_came: number; // bugüne kadar toplam gelinen (ömür boyu)
   cancelled: number;
   upcoming: number;
   history: AttendanceRecord[];
