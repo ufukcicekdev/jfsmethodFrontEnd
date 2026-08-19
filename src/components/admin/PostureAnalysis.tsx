@@ -51,6 +51,7 @@ export function PostureAnalysis({
   const [metrics, setMetrics] = useState<PostureMetric[] | null>(null);
   const [summary, setSummary] = useState("");
   const [hasResult, setHasResult] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -206,6 +207,7 @@ export function PostureAnalysis({
       onMessage("Postür analizi kaydedildi.", "success");
       setHasResult(false);
       setMetrics(null);
+      setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       await loadHistory();
     } catch (err) {
@@ -269,13 +271,26 @@ export function PostureAnalysis({
             accept="image/png,image/jpeg,image/webp"
             disabled={analyzing}
             onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleFile(file);
+              const file = e.target.files?.[0] ?? null;
+              setSelectedFile(file);
+              setHasResult(false);
+              setMetrics(null);
             }}
             className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-full file:border-0 file:bg-blue-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-blue-600 dark:text-slate-300"
           />
         </FormGroup>
       </div>
+
+      {selectedFile && (
+        <button
+          type="button"
+          onClick={() => selectedFile && handleFile(selectedFile)}
+          disabled={analyzing}
+          className="mt-4 rounded-full bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50"
+        >
+          {analyzing ? "Analiz ediliyor…" : "Analiz Et"}
+        </button>
+      )}
 
       {analyzing && (
         <div className="mt-4 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
