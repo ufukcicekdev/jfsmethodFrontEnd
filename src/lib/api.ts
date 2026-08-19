@@ -400,6 +400,7 @@ export interface PostureAssessment {
   metrics: PostureMetricRecord[];
   summary: string;
   note: string;
+  admin_note: string;
   created_by_name: string | null;
   created_at: string;
 }
@@ -1545,6 +1546,17 @@ export const api = {
         token
       );
     },
+
+    updatePostureAssessment: (
+      token: string,
+      patientId: number,
+      assessmentId: number,
+      data: { admin_note: string }
+    ) =>
+      apiFetch<PostureAssessment>(
+        `/admin/patients/${patientId}/posture/${assessmentId}/`,
+        { method: "PATCH", token, body: JSON.stringify(data) }
+      ),
 
     deletePostureAssessment: async (
       token: string,

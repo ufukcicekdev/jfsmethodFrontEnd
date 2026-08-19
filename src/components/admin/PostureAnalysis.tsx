@@ -55,8 +55,43 @@ export function PostureAnalysis({
   const [warnings, setWarnings] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [interpreting, setInterpreting] = useState(false);
+  const [detailItem, setDetailItem] = useState<PostureAssessment | null>(null);
+  const [adminNoteDraft, setAdminNoteDraft] = useState("");
+  const [savingAdminNote, setSavingAdminNote] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const openDetail = useCallback((item: PostureAssessment) => {
+    setDetailItem(item);
+    setAdminNoteDraft(item.admin_note ?? "");
+  }, []);
+
+  const handleSaveAdminNote = async () => {
+    if (!detailItem) return;
+    const token = getAccessToken();
+    if (!token) return;
+    setSavingAdminNote(true);
+    try {
+      const updated = await api.admin.updatePostureAssessment(
+        token,
+        patientId,
+        detailItem.id,
+        { admin_note: adminNoteDraft }
+      );
+      setHistory((prev) =>
+        prev.map((h) => (h.id === updated.id ? updated : h))
+      );
+      setDetailItem(updated);
+      onMessage("Klinisyen notu kaydedildi.", "success");
+    } catch (err) {
+      onMessage(
+        err instanceof Error ? err.message : "Not kaydedilemedi.",
+        "error"
+      );
+    } finally {
+      setSavingAdminNote(false);
+    }
+  };
 
   const canvasBlob = useCallback(
     () =>
@@ -462,7 +497,13 @@ export function PostureAnalysis({
             {history.map((item) => (
               <div
                 key={item.id}
-                className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/50 dark:border-slate-600/50 dark:bg-slate-800/40"
+                role="button"
+                tabIndex={0}
+                onClick={() => openDetail(item)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") openDetail(item);
+                }}
+                className="cursor-pointer overflow-hidden rounded-2xl border border-slate-200/80 bg-white/50 text-left transition hover:border-blue-300 hover:shadow-md dark:border-slate-600/50 dark:bg-slate-800/40 dark:hover:border-blue-500/50"
               >
                 {item.image_url && (
                   <div className="relative aspect-3/4 w-full bg-slate-900/5">
@@ -503,20 +544,128 @@ export function PostureAnalysis({
                     })}
                   </div>
                   {item.note && (
-                    <p className="whitespace-pre-wrap border-t border-slate-200/70 pt-2 text-xs text-slate-600 dark:border-slate-600/50 dark:text-slate-300">
+                    <p className="line-clamp-2 border-t border-slate-200/70 pt-2 text-xs text-slate-500 dark:border-slate-600/50 dark:text-slate-400">
                       {item.note}
                     </p>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(item.id)}
-                    className="text-xs font-medium text-rose-500 hover:text-rose-600"
-                  >
-                    Sil
-                  </button>
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-300">
+                      {item.admin_note ? "📝 Klinisyen notu var" : "Detay & yorum"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(item.id);
+                      }}
+                      className="text-xs font-medium text-rose-500 hover:text-rose-600"
+                    >
+                      Sil
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {detailItem && (
+        <div
+          className="fixed inset-0 z-100 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"
+          onClick={() => setDetailItem(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-white/30 bg-white/95 p-5 shadow-xl backdrop-blur-md dark:border-slate-600/40 dark:bg-slate-900/95 sm:p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+                  Postür Analizi — {detailItem.view_label}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {formatDate(detailItem.created_at)}
+                  {detailItem.created_by_name
+                    ? ` · ${detailItem.created_by_name}`
+                    : ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailItem(null)}
+                className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+                aria-label="Kapat"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-4 grid gap-5 md:grid-cols-2">
+              <div className="space-y-3">
+                {detailItem.image_url && (
+                  <div className="relative aspect-3/4 w-full overflow-hidden rounded-xl bg-slate-900/5">
+                    <Image
+                      src={detailItem.image_url}
+                      alt={`Postür analizi — ${detailItem.view_label}`}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      className="object-contain"
+                      unoptimized
+                    />
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-1.5">
+                  {detailItem.metrics?.map((m) => {
+                    const s = STATUS_STYLES[m.status];
+                    return (
+                      <span
+                        key={m.key}
+                        className={`inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs dark:bg-slate-700/60 ${s.text}`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+                        {m.label}:{" "}
+                        {m.value === null ? "—" : `${m.value}${m.unit}`}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <p className="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    AI Değerlendirme Notu
+                  </p>
+                  <p className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 text-sm leading-relaxed text-slate-700 dark:border-slate-600/50 dark:bg-slate-800/40 dark:text-slate-200">
+                    {detailItem.note || "AI notu bulunmuyor."}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    Klinisyen Notu
+                  </label>
+                  <textarea
+                    value={adminNoteDraft}
+                    onChange={(e) => setAdminNoteDraft(e.target.value)}
+                    rows={5}
+                    placeholder="Kendi gözlem ve önerilerinizi buraya ekleyin…"
+                    className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-blue-400 focus:outline-none dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveAdminNote}
+                    disabled={savingAdminNote || adminNoteDraft === (detailItem.admin_note ?? "")}
+                    className="mt-2 w-full rounded-full bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50"
+                  >
+                    {savingAdminNote ? "Kaydediliyor…" : "Klinisyen Notunu Kaydet"}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
