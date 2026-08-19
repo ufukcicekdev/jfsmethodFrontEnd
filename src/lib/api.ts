@@ -1235,6 +1235,10 @@ export const api = {
     deleteProgressPhoto: (token: string, id: number) =>
       apiFetch<void>(`/wellness/progress-photos/${id}/`, { token, method: "DELETE" }),
 
+    // Klinisyenin eklediği postür analizleri (salt-okunur).
+    postureAssessments: (token: string) =>
+      apiFetch<PostureAssessment[]>("/wellness/posture/", { token }),
+
     water: {
       get: (token: string) =>
         apiFetch<{ date: string; ml_consumed: number }>("/wellness/water/", { token }),

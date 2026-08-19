@@ -20,7 +20,7 @@ const NAV_ITEMS = [
   { href: "/hesabim/ogunler", label: "Öğün Takibi", exact: false },
   { href: "/hesabim/egzersizlerim", label: "Egzersizlerim", exact: false },
   { href: "/hesabim/dijital-ikiz", label: "Tedavi İkizi", exact: false },
-  { href: "/hesabim/fotograflarim", label: "Fotoğraflarım", exact: false },
+  { href: "/hesabim/fotograflarim", label: "Postür & Fotoğraf", exact: false },
   { href: "/hesabim/olcumler", label: "Ölçümlerim", exact: false },
   { href: "/hesabim/bildirimler", label: "Bildirimler", exact: false },
   { href: "/hesabim/rapor", label: "Raporum", exact: false },

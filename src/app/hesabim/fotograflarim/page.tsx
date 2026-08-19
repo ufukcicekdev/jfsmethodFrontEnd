@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { PatientProgressGallery } from "@/components/patient/PatientProgressGallery";
+import { PatientPostureView } from "@/components/patient/PatientPostureView";
 import { PHOTO_CATEGORIES } from "@/components/admin/PatientPhotoSection";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CustomSelect } from "@/components/ui/CustomSelect";
@@ -101,6 +102,9 @@ export default function FotograflarimPage() {
 
   return (
     <div className="space-y-6">
+        {/* Klinisyenin eklediği postür analizleri (salt-okunur) */}
+        <PatientPostureView />
+
         {/* Upload form */}
         <GlassCard className="p-4 sm:p-6">
           <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-50">
