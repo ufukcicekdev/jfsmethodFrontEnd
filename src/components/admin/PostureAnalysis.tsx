@@ -52,8 +52,47 @@ export function PostureAnalysis({
   const [summary, setSummary] = useState("");
   const [hasResult, setHasResult] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [note, setNote] = useState("");
+  const [interpreting, setInterpreting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const canvasBlob = useCallback(
+    () =>
+      new Promise<Blob | null>((resolve) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return resolve(null);
+        canvas.toBlob((b) => resolve(b), "image/png");
+      }),
+    []
+  );
+
+  const generateNote = useCallback(
+    async (resultMetrics: PostureMetric[]) => {
+      const token = getAccessToken();
+      if (!token) return;
+      setInterpreting(true);
+      try {
+        const blob = await canvasBlob();
+        if (!blob) throw new Error("Görsel hazırlanamadı.");
+        const res = await api.admin.interpretPosture(token, patientId, {
+          image: blob,
+          view,
+          metrics: resultMetrics,
+        });
+        setNote(res.note);
+      } catch (err) {
+        onMessage(
+          err instanceof Error ? err.message : "AI yorumu alınamadı.",
+          "error"
+        );
+      } finally {
+        setInterpreting(false);
+      }
+    },
+    [canvasBlob, patientId, view, onMessage]
+  );
 
   const loadHistory = useCallback(async () => {
     const token = getAccessToken();
@@ -137,7 +176,9 @@ export function PostureAnalysis({
             ? "#f43f5e"
             : m?.status === "mild"
               ? "#f59e0b"
-              : "#10b981";
+              : m?.status === "unknown"
+                ? "#94a3b8"
+                : "#10b981";
         ctx.strokeStyle = color;
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
@@ -147,7 +188,7 @@ export function PostureAnalysis({
         if (m) {
           const midX = (a.x + b.x) / 2;
           const midY = (a.y + b.y) / 2;
-          const label = `${m.value}${m.unit}`;
+          const label = m.value === null ? "—" : `${m.value}${m.unit}`;
           ctx.fillStyle = "rgba(15,23,42,0.78)";
           const tw = ctx.measureText(label).width + 10;
           const th = Math.max(16, Math.round(w / 34));
@@ -164,6 +205,8 @@ export function PostureAnalysis({
     setAnalyzing(true);
     setHasResult(false);
     setMetrics(null);
+    setWarnings([]);
+    setNote("");
     const url = URL.createObjectURL(file);
     try {
       const img = new window.Image();
@@ -174,7 +217,10 @@ export function PostureAnalysis({
       drawResult(img, result.landmarks, result.highlights, result.metrics);
       setMetrics(result.metrics);
       setSummary(result.summary);
+      setWarnings(result.warnings);
       setHasResult(true);
+      // Ölçümler + işaretli görsel Gemini'ye gidip klinik yorum taslağı üretir.
+      await generateNote(result.metrics);
     } catch (err) {
       onMessage(
         err instanceof Error ? err.message : "Analiz başarısız oldu.",
@@ -203,11 +249,14 @@ export function PostureAnalysis({
         view,
         metrics,
         summary,
+        note,
       });
       onMessage("Postür analizi kaydedildi.", "success");
       setHasResult(false);
       setMetrics(null);
       setSelectedFile(null);
+      setNote("");
+      setWarnings([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
       await loadHistory();
     } catch (err) {
@@ -249,8 +298,10 @@ export function PostureAnalysis({
       </h2>
       <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
         Hastanın önden / yandan fotoğrafını yükleyin. Vücut noktaları cihazda
-        (yapay zekâ ile) tespit edilir, duruş açıları hesaplanır. Fotoğraf
-        sunucuya gönderilmez; yalnızca işaretlenmiş sonucu kaydedebilirsiniz.
+        (BlazePose ile) tespit edilir, duruş açıları hesaplanır. Ardından
+        işaretli görsel ve ölçümler klinik yorum taslağı için Google Gemini&apos;ye
+        gönderilir; yorumu düzenleyip kaydedebilirsiniz. Açılar tek fotoğraftan
+        çıkarılan yaklaşık değerlerdir, klinik tanı yerine geçmez.
       </p>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -299,6 +350,20 @@ export function PostureAnalysis({
         </div>
       )}
 
+      {hasResult && warnings.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {warnings.map((wmsg, i) => (
+            <div
+              key={i}
+              className="flex items-start gap-2 rounded-xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200"
+            >
+              <span aria-hidden>⚠️</span>
+              <span>{wmsg}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className={`mt-5 grid gap-5 ${hasResult ? "lg:grid-cols-2" : ""}`}>
         <div
           className={`relative overflow-hidden rounded-2xl border border-slate-200/70 bg-slate-900/5 dark:border-slate-600/50 ${
@@ -327,8 +392,7 @@ export function PostureAnalysis({
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold text-slate-900 dark:text-slate-50">
-                      {m.value}
-                      {m.unit}
+                      {m.value === null ? "Ölçülemedi" : `${m.value}${m.unit}`}
                     </p>
                     <span
                       className={`inline-flex items-center gap-1 text-xs font-semibold ${s.text}`}
@@ -341,10 +405,43 @@ export function PostureAnalysis({
               );
             })}
 
+            <div className="rounded-xl border border-slate-200/80 bg-white/50 p-4 dark:border-slate-600/50 dark:bg-slate-800/40">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                  Klinik Değerlendirme Notu
+                  <span className="ml-1 text-xs font-normal text-slate-400">
+                    (AI taslağı — düzenleyebilirsiniz)
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => metrics && generateNote(metrics)}
+                  disabled={interpreting}
+                  className="shrink-0 rounded-full border border-blue-300 px-3 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:opacity-50 dark:border-blue-500/40 dark:text-blue-300 dark:hover:bg-blue-950/40"
+                >
+                  {interpreting ? "Üretiliyor…" : "AI ile yeniden üret"}
+                </button>
+              </div>
+              {interpreting && !note ? (
+                <div className="flex items-center gap-2 py-4 text-sm text-slate-500 dark:text-slate-400">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-200 border-t-blue-500" />
+                  Gemini klinik yorumu hazırlıyor…
+                </div>
+              ) : (
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={8}
+                  placeholder="AI yorumu burada görünecek; dilediğiniz gibi düzenleyebilirsiniz."
+                  className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-blue-400 focus:outline-none dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100"
+                />
+              )}
+            </div>
+
             <button
               type="button"
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || interpreting}
               className="w-full rounded-full bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50"
             >
               {saving ? "Kaydediliyor…" : "Analizi Kaydet"}
@@ -399,12 +496,17 @@ export function PostureAnalysis({
                           <span
                             className={`h-1.5 w-1.5 rounded-full ${s.dot}`}
                           />
-                          {m.label}: {m.value}
-                          {m.unit}
+                          {m.label}:{" "}
+                          {m.value === null ? "—" : `${m.value}${m.unit}`}
                         </span>
                       );
                     })}
                   </div>
+                  {item.note && (
+                    <p className="whitespace-pre-wrap border-t border-slate-200/70 pt-2 text-xs text-slate-600 dark:border-slate-600/50 dark:text-slate-300">
+                      {item.note}
+                    </p>
+                  )}
                   <button
                     type="button"
                     onClick={() => handleDelete(item.id)}

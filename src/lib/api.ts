@@ -385,10 +385,11 @@ export interface PatientProgressPhoto {
 export interface PostureMetricRecord {
   key: string;
   label: string;
-  value: number;
+  value: number | null;
   unit: string;
-  status: "normal" | "mild" | "warn";
+  status: "normal" | "mild" | "warn" | "unknown";
   detail: string;
+  reliable?: boolean;
 }
 
 export interface PostureAssessment {
@@ -398,6 +399,7 @@ export interface PostureAssessment {
   image_url: string | null;
   metrics: PostureMetricRecord[];
   summary: string;
+  note: string;
   created_by_name: string | null;
   created_at: string;
 }
@@ -1506,6 +1508,7 @@ export const api = {
         view: "front" | "side" | "back";
         metrics: PostureMetricRecord[];
         summary: string;
+        note?: string;
       }
     ) => {
       const formData = new FormData();
@@ -1513,8 +1516,31 @@ export const api = {
       formData.append("view", data.view);
       formData.append("metrics", JSON.stringify(data.metrics));
       formData.append("summary", data.summary);
+      formData.append("note", data.note ?? "");
       return apiUpload<PostureAssessment>(
         `/admin/patients/${patientId}/posture/`,
+        formData,
+        token
+      );
+    },
+
+    // Cihazda hesaplanan açıları + işaretli görseli Gemini'ye gönderip
+    // Türkçe klinik yorum taslağı alır. Kayıt yapmaz.
+    interpretPosture: (
+      token: string,
+      patientId: number,
+      data: {
+        image: Blob;
+        view: "front" | "side" | "back";
+        metrics: PostureMetricRecord[];
+      }
+    ) => {
+      const formData = new FormData();
+      formData.append("image", data.image, "posture.png");
+      formData.append("view", data.view);
+      formData.append("metrics", JSON.stringify(data.metrics));
+      return apiUpload<{ note: string }>(
+        `/admin/patients/${patientId}/posture/interpret/`,
         formData,
         token
       );

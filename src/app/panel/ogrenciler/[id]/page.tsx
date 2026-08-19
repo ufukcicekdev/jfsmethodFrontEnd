@@ -438,6 +438,17 @@ export default function StudentDetailPage() {
 
       {activeTab === "postur" && (
         <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-200/70 bg-slate-50/50 px-4 py-3 text-sm text-slate-600 dark:border-slate-600/50 dark:bg-slate-800/30 dark:text-slate-300">
+            Bu sekmede iki ayrı araç var:{" "}
+            <strong className="font-semibold text-slate-800 dark:text-slate-100">
+              Postür Analizi
+            </strong>{" "}
+            tek bir fotoğraftan anlık duruş açılarını ölçüp AI yorumu üretir;{" "}
+            <strong className="font-semibold text-slate-800 dark:text-slate-100">
+              İlerleme Fotoğrafları
+            </strong>{" "}
+            ise tedavi boyunca değişimi zaman içinde takip etmek içindir.
+          </div>
           <PostureAnalysis patientId={id} onMessage={showMessage} />
           <PatientPhotoSection
             patientId={id}

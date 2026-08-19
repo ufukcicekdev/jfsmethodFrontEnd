@@ -28,15 +28,18 @@ export const LM = {
 } as const;
 
 export type PostureView = "front" | "side" | "back";
-export type MetricStatus = "normal" | "mild" | "warn";
+export type MetricStatus = "normal" | "mild" | "warn" | "unknown";
 
 export interface PostureMetric {
   key: string;
   label: string;
-  value: number;
+  /** Ölçülemeyen (nokta görünmüyor) metriklerde null. */
+  value: number | null;
   unit: string;
   status: MetricStatus;
   detail: string;
+  /** false ise değer şüpheli (absürt açı / düşük görünürlük). */
+  reliable?: boolean;
 }
 
 export interface PostureResult {
@@ -45,7 +48,12 @@ export interface PostureResult {
   /** Vurgulanacak ölçüm çizgileri (nokta indeks çiftleri). */
   highlights: [number, number][];
   summary: string;
+  /** Foto/görünüm uyuşmazlığı vb. kullanıcıya gösterilecek uyarılar. */
+  warnings: string[];
 }
+
+/** Metrik hesabında kullanılan noktalar için asgari güvenilirlik eşiği. */
+const VISIBILITY_MIN = 0.5;
 
 let landmarkerPromise: Promise<PoseLandmarker> | null = null;
 
@@ -121,6 +129,56 @@ function avgVisibility(...lms: NormalizedLandmark[]): number {
   return vals.reduce((a, b) => a + b, 0) / vals.length;
 }
 
+/**
+ * Görünürlük ve absürt-değer korumalarıyla bir metrik üretir.
+ * - Noktalar yeterince görünmüyorsa: "ölçülemedi" (value null, status unknown).
+ * - Değer `absurdMax` üstündeyse: değer gösterilir ama güvenilmez işaretlenir.
+ */
+function buildMetric(params: {
+  key: string;
+  label: string;
+  value: number;
+  unit: string;
+  normalMax: number;
+  mildMax: number;
+  detail: string;
+  visibility: number;
+  absurdMax: number;
+}): PostureMetric {
+  const { key, label, value, unit, normalMax, mildMax, detail } = params;
+  if (params.visibility < VISIBILITY_MIN) {
+    return {
+      key,
+      label,
+      value: null,
+      unit,
+      status: "unknown",
+      detail: "Ölçülemedi — ilgili noktalar net görünmüyor",
+      reliable: false,
+    };
+  }
+  if (value > params.absurdMax) {
+    return {
+      key,
+      label,
+      value: round(value),
+      unit,
+      status: "unknown",
+      detail: "Güvenilmez değer — fotoğrafı/görünümü kontrol edin",
+      reliable: false,
+    };
+  }
+  return {
+    key,
+    label,
+    value: round(value),
+    unit,
+    status: classify(value, normalMax, mildMax),
+    detail,
+    reliable: true,
+  };
+}
+
 function frontMetrics(lm: NormalizedLandmark[]): {
   metrics: PostureMetric[];
   highlights: [number, number][];
@@ -156,31 +214,41 @@ function frontMetrics(lm: NormalizedLandmark[]): {
         ? "Baş sağa eğik"
         : "Baş sola eğik";
 
+  // Simetri açıları 2D önden fotoda ~25°'yi aşmamalı; aşıyorsa foto/görünüm sorunu.
   const metrics: PostureMetric[] = [
-    {
+    buildMetric({
       key: "shoulder_tilt",
       label: "Omuz Dengesi",
-      value: round(shoulderTilt),
+      value: shoulderTilt,
       unit: "°",
-      status: classify(shoulderTilt, 2, 4),
+      normalMax: 2,
+      mildMax: 4,
       detail: shoulderSide,
-    },
-    {
+      visibility: avgVisibility(ls, rs),
+      absurdMax: 25,
+    }),
+    buildMetric({
       key: "hip_tilt",
       label: "Kalça (Pelvis) Dengesi",
-      value: round(hipTilt),
+      value: hipTilt,
       unit: "°",
-      status: classify(hipTilt, 2, 4),
+      normalMax: 2,
+      mildMax: 4,
       detail: hipSide,
-    },
-    {
+      visibility: avgVisibility(lh, rh),
+      absurdMax: 25,
+    }),
+    buildMetric({
       key: "head_tilt",
       label: "Baş Eğimi",
-      value: round(headTilt),
+      value: headTilt,
       unit: "°",
-      status: classify(headTilt, 2, 4),
+      normalMax: 2,
+      mildMax: 4,
       detail: headSide,
-    },
+      visibility: avgVisibility(le, re),
+      absurdMax: 25,
+    }),
   ];
 
   const highlights: [number, number][] = [
@@ -225,25 +293,28 @@ function sideMetrics(lm: NormalizedLandmark[]): {
   const trunkLean = angleFromVertical(hip, shoulder);
 
   const metrics: PostureMetric[] = [
-    {
+    buildMetric({
       key: "forward_head",
       label: "İleri Baş Duruşu",
-      value: round(forwardHead),
+      value: forwardHead,
       unit: "°",
-      status: classify(forwardHead, 5, 12),
-      detail:
-        forwardHead <= 5
-          ? "Normal aralıkta"
-          : "Baş omuz hizasının önünde",
-    },
-    {
+      normalMax: 5,
+      mildMax: 12,
+      detail: forwardHead <= 5 ? "Normal aralıkta" : "Baş omuz hizasının önünde",
+      visibility: avgVisibility(ear, shoulder),
+      absurdMax: 45,
+    }),
+    buildMetric({
       key: "trunk_lean",
       label: "Gövde Eğimi",
-      value: round(trunkLean),
+      value: trunkLean,
       unit: "°",
-      status: classify(trunkLean, 5, 10),
+      normalMax: 5,
+      mildMax: 10,
       detail: trunkLean <= 5 ? "Dik duruş" : "Gövde öne/arkaya eğik",
-    },
+      visibility: avgVisibility(hip, shoulder),
+      absurdMax: 45,
+    }),
   ];
 
   const highlights: [number, number][] = [
@@ -261,13 +332,35 @@ function round(v: number): number {
 }
 
 function buildSummary(metrics: PostureMetric[]): string {
-  const issues = metrics.filter((m) => m.status !== "normal");
+  const issues = metrics.filter(
+    (m) => (m.status === "mild" || m.status === "warn") && m.value !== null
+  );
   if (issues.length === 0) {
     return "Belirgin bir postür sapması saptanmadı.";
   }
   return issues
     .map((m) => `${m.label}: ${m.value}${m.unit} (${m.detail})`)
     .join("; ");
+}
+
+/** Foto/görünüm uyuşmazlığını omuzların yatay ayrımından tahmin eder. */
+function viewWarnings(lm: NormalizedLandmark[], view: PostureView): string[] {
+  const warnings: string[] = [];
+  const ls = lm[LM.leftShoulder];
+  const rs = lm[LM.rightShoulder];
+  if (!ls || !rs) return warnings;
+  const shoulderSep = Math.abs(ls.x - rs.x);
+  if (view !== "side" && shoulderSep < 0.08) {
+    warnings.push(
+      "Görünüm 'Önden/Arkadan' seçili ama fotoğraf yandan çekilmiş görünüyor — ölçümler yanıltıcı olabilir. Doğru görünümü seçin."
+    );
+  }
+  if (view === "side" && shoulderSep > 0.18) {
+    warnings.push(
+      "Görünüm 'Yandan' seçili ama fotoğraf önden/arkadan çekilmiş görünüyor — ölçümler yanıltıcı olabilir. Doğru görünümü seçin."
+    );
+  }
+  return warnings;
 }
 
 /**
@@ -297,6 +390,7 @@ export async function analyzePosture(
     metrics,
     highlights,
     summary: buildSummary(metrics),
+    warnings: viewWarnings(lm, view),
   };
 }
 
@@ -318,5 +412,10 @@ export const STATUS_STYLES: Record<
     label: "Belirgin",
     text: "text-rose-600 dark:text-rose-400",
     dot: "bg-rose-500",
+  },
+  unknown: {
+    label: "Belirsiz",
+    text: "text-slate-500 dark:text-slate-400",
+    dot: "bg-slate-400",
   },
 };
