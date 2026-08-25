@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatBox } from "@/components/chat/ChatBox";
 import { useChatViewportHeight } from "@/hooks/useChatViewportHeight";
+import { mergeRecent, prependOlder } from "@/lib/chat";
 import { getAccessToken } from "@/lib/auth";
 import {
   api,
@@ -31,6 +32,7 @@ export default function AdminMessagesPage() {
   const [selected, setSelected] = useState<number | null>(null);
   const [selectedName, setSelectedName] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [hasMore, setHasMore] = useState(false);
   const [loadingThread, setLoadingThread] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const lastIdRef = useRef(0);
@@ -65,6 +67,7 @@ export default function AdminMessagesPage() {
       .then((res) => {
         setSelectedName(res.patient.name);
         setMessages(res.messages);
+        setHasMore(res.has_more);
         lastIdRef.current = res.messages.at(-1)?.id ?? 0;
         // listedeki okunmamışı düş
         setConversations((prev) =>
@@ -91,14 +94,25 @@ export default function AdminMessagesPage() {
       api.admin
         .chatThread(token, selected)
         .then((res) => {
-          setMessages(res.messages);
-          lastIdRef.current = res.messages.at(-1)?.id ?? 0;
+          setMessages((prev) => mergeRecent(prev, res.messages));
+          lastIdRef.current = res.messages.at(-1)?.id ?? lastIdRef.current;
         })
         .catch(() => {});
     };
     const t = setInterval(poll, THREAD_POLL_MS);
     return () => clearInterval(t);
   }, [selected]);
+
+  const handleLoadOlder = async () => {
+    if (selected == null || messages.length === 0) return;
+    const token = getAccessToken();
+    if (!token) return;
+    const res = await api.admin.chatThread(token, selected, {
+      before: messages[0].id,
+    });
+    setMessages((prev) => prependOlder(prev, res.messages));
+    setHasMore(res.has_more);
+  };
 
   const handleSendText = async (text: string) => {
     if (selected == null) return;
@@ -257,6 +271,8 @@ export default function AdminMessagesPage() {
                   onSendFile={handleSendFile}
                   onEditMessage={handleEdit}
                   onDeleteMessage={handleDelete}
+                  onLoadOlder={handleLoadOlder}
+                  hasMore={hasMore}
                   loading={loadingThread}
                 />
               </div>

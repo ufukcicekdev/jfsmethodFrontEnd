@@ -2041,12 +2041,13 @@ export const api = {
     chatUnread: (token: string) =>
       apiFetch<{ total_unread: number }>("/admin/chat/unread/", { token }),
 
-    chatThread: (token: string, patientId: number, after?: number) =>
+    chatThread: (token: string, patientId: number, opts?: { before?: number }) =>
       apiFetch<{
         patient: { id: number; name: string; username: string };
         messages: ChatMessage[];
+        has_more: boolean;
       }>(
-        `/admin/chat/${patientId}/${after ? `?after=${after}` : ""}`,
+        `/admin/chat/${patientId}/${opts?.before ? `?before=${opts.before}` : ""}`,
         { token }
       ),
 
@@ -2350,9 +2351,9 @@ export const api = {
   },
 
   chat: {
-    thread: (token: string, after?: number) =>
-      apiFetch<{ messages: ChatMessage[]; unread: number }>(
-        `/chat/${after ? `?after=${after}` : ""}`,
+    thread: (token: string, opts?: { before?: number }) =>
+      apiFetch<{ messages: ChatMessage[]; has_more: boolean; unread: number }>(
+        `/chat/${opts?.before ? `?before=${opts.before}` : ""}`,
         { token }
       ),
     unread: (token: string) =>

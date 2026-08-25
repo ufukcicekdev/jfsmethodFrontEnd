@@ -183,6 +183,8 @@ export function ChatBox({
   onSendFile,
   onEditMessage,
   onDeleteMessage,
+  onLoadOlder,
+  hasMore = false,
   loading = false,
   emptyText = "Henüz mesaj yok. İlk mesajı gönderin.",
   header,
@@ -193,6 +195,8 @@ export function ChatBox({
   onSendFile: (file: File) => Promise<void>;
   onEditMessage?: (id: number, text: string) => Promise<void>;
   onDeleteMessage?: (id: number) => Promise<void>;
+  onLoadOlder?: () => Promise<void>;
+  hasMore?: boolean;
   loading?: boolean;
   emptyText?: string;
   header?: ReactNode;
@@ -202,22 +206,46 @@ export function ChatBox({
   const [showEmoji, setShowEmoji] = useState(false);
   const [err, setErr] = useState("");
   const [editing, setEditing] = useState<ChatMessage | null>(null);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const confirm = useConfirm();
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const nearBottomRef = useRef(true);
   const lastIdRef = useRef(0);
+  const loadingOlderRef = useRef(false);
+  const prevScrollHeightRef = useRef<number | null>(null);
+
+  const triggerLoadOlder = async () => {
+    if (loadingOlderRef.current || !hasMore || !onLoadOlder) return;
+    loadingOlderRef.current = true;
+    setLoadingOlder(true);
+    // Prepend sonrası konumu korumak için mevcut yüksekliği kaydet
+    prevScrollHeightRef.current = scrollRef.current?.scrollHeight ?? null;
+    try {
+      await onLoadOlder();
+    } finally {
+      loadingOlderRef.current = false;
+      setLoadingOlder(false);
+    }
+  };
 
   const onScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
     nearBottomRef.current =
       el.scrollHeight - el.scrollTop - el.clientHeight < 140;
+    if (el.scrollTop < 60) triggerLoadOlder();
   };
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+    // Yukarı eski mesaj yüklendiyse: kaydırma konumunu koru (aşağı zıplama)
+    if (prevScrollHeightRef.current != null) {
+      el.scrollTop = el.scrollHeight - prevScrollHeightRef.current;
+      prevScrollHeightRef.current = null;
+      return;
+    }
     const lastId = messages.at(-1)?.id ?? 0;
     const isNew = lastId > lastIdRef.current;
     lastIdRef.current = lastId;
@@ -291,6 +319,13 @@ export function ChatBox({
       {header && (
         <div className="shrink-0 border-b border-slate-200/70 dark:border-slate-700/60">
           {header}
+        </div>
+      )}
+
+      {loadingOlder && (
+        <div className="flex shrink-0 items-center justify-center gap-2 py-1.5 text-[11px] text-slate-400">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-200 border-t-blue-500" />
+          Eski mesajlar yükleniyor…
         </div>
       )}
 

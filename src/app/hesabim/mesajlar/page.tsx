@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChatBox } from "@/components/chat/ChatBox";
 import { useChatViewportHeight } from "@/hooks/useChatViewportHeight";
+import { mergeRecent, prependOlder } from "@/lib/chat";
 import { getAccessToken } from "@/lib/auth";
 import { api, type ChatMessage } from "@/lib/api";
 
@@ -11,18 +12,22 @@ const POLL_MS = 4000;
 export default function PatientMessagesPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const vh = useChatViewportHeight(cardRef);
 
   useEffect(() => {
-    // Tam senkron: her seferinde son mesajları çekip yerine koyar
-    // (düzenleme/silme karşı tarafa da yansısın diye).
+    // Son mesaj penceresini çekip birleştirir; eski (yukarı yüklenmiş)
+    // mesajlar korunur. Düzenleme/silme/yeni mesaj bu pencerede yansır.
     const sync = (first = false) => {
       const token = getAccessToken();
       if (!token) return;
       api.chat
         .thread(token)
-        .then((res) => setMessages(res.messages))
+        .then((res) => {
+          setMessages((prev) => mergeRecent(prev, res.messages));
+          if (first) setHasMore(res.has_more);
+        })
         .catch(() => {})
         .finally(() => {
           if (first) setLoading(false);
@@ -32,6 +37,14 @@ export default function PatientMessagesPage() {
     const timer = setInterval(() => sync(), POLL_MS);
     return () => clearInterval(timer);
   }, []);
+
+  const handleLoadOlder = async () => {
+    const token = getAccessToken();
+    if (!token || messages.length === 0) return;
+    const res = await api.chat.thread(token, { before: messages[0].id });
+    setMessages((prev) => prependOlder(prev, res.messages));
+    setHasMore(res.has_more);
+  };
 
   const handleSendText = async (text: string) => {
     const token = getAccessToken();
@@ -74,6 +87,8 @@ export default function PatientMessagesPage() {
         onSendFile={handleSendFile}
         onEditMessage={handleEdit}
         onDeleteMessage={handleDelete}
+        onLoadOlder={handleLoadOlder}
+        hasMore={hasMore}
         loading={loading}
         emptyText="Henüz mesaj yok. Uzmanınıza ilk mesajı gönderin."
         header={
