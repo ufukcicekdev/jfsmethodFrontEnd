@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { EmojiPicker } from "@/components/chat/EmojiPicker";
+import { useConfirm } from "@/components/providers/ConfirmProvider";
 import type { ChatMessage } from "@/lib/api";
 
 function formatTime(value: string) {
@@ -211,6 +212,7 @@ export function ChatBox({
   const [showEmoji, setShowEmoji] = useState(false);
   const [err, setErr] = useState("");
   const [editing, setEditing] = useState<ChatMessage | null>(null);
+  const confirm = useConfirm();
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const nearBottomRef = useRef(true);
@@ -264,7 +266,13 @@ export function ChatBox({
 
   const handleDelete = async (m: ChatMessage) => {
     if (!onDeleteMessage) return;
-    if (!window.confirm("Bu mesajı silmek istediğinize emin misiniz?")) return;
+    const ok = await confirm({
+      title: "Mesajı sil",
+      message: "Bu mesajı silmek istediğinize emin misiniz?",
+      confirmLabel: "Sil",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
       await onDeleteMessage(m.id);
       if (editing?.id === m.id) cancelEdit();
