@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { GlassCard } from "@/components/ui/GlassCard";
+import { useEffect, useRef, useState } from "react";
 import { ChatBox } from "@/components/chat/ChatBox";
+import { useChatViewportHeight } from "@/hooks/useChatViewportHeight";
 import { getAccessToken } from "@/lib/auth";
 import { api, type ChatMessage } from "@/lib/api";
 
@@ -11,6 +11,8 @@ const POLL_MS = 4000;
 export default function PatientMessagesPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const vh = useChatViewportHeight(cardRef);
 
   useEffect(() => {
     // Tam senkron: her seferinde son mesajları çekip yerine koyar
@@ -55,12 +57,16 @@ export default function PatientMessagesPage() {
   const handleDelete = async (id: number) => {
     const token = getAccessToken();
     if (!token) return;
-    const updated = await api.chat.deleteMessage(token, id);
-    setMessages((prev) => prev.map((m) => (m.id === id ? updated : m)));
+    await api.chat.deleteMessage(token, id);
+    setMessages((prev) => prev.filter((m) => m.id !== id));
   };
 
   return (
-    <GlassCard className="flex h-[calc(100dvh-9.5rem)] min-h-[440px] flex-col overflow-hidden">
+    <div
+      ref={cardRef}
+      style={vh ? { height: `${vh}px` } : undefined}
+      className="glass flex h-[calc(100dvh-9.5rem)] flex-col overflow-hidden rounded-3xl"
+    >
       <ChatBox
         messages={messages}
         ownSide="patient"
@@ -84,6 +90,6 @@ export default function PatientMessagesPage() {
           </div>
         }
       />
-    </GlassCard>
+    </div>
   );
 }

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { FluidBackground } from "@/components/layout/FluidBackground";
 import { NotificationBell } from "@/components/admin/NotificationBell";
+import { ChatIndicator } from "@/components/chat/ChatIndicator";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { DarkModeToggle } from "@/components/ui/DarkModeToggle";
 import { isStaffUser, getAccessToken } from "@/lib/auth";
@@ -448,6 +449,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
+              <ChatIndicator href="/panel/mesajlar" count={chatUnread} />
               <DarkModeToggle />
               <NotificationBell />
             </div>
@@ -493,6 +495,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
 
             <main className="min-w-0 flex-1">
               <div className="mb-4 hidden items-center justify-end gap-2 lg:mb-6 lg:flex">
+                <ChatIndicator href="/panel/mesajlar" count={chatUnread} />
                 <DarkModeToggle />
                 <NotificationBell />
               </div>

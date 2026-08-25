@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { FluidBackground } from "@/components/layout/FluidBackground";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import { PatientNotificationBell } from "@/components/patient/PatientNotificationBell";
+import { ChatIndicator } from "@/components/chat/ChatIndicator";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { DarkModeToggle } from "@/components/ui/DarkModeToggle";
 import { isStaffUser, getAccessToken } from "@/lib/auth";
@@ -254,6 +255,7 @@ export function PatientShell({ children }: { children: ReactNode }) {
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              <ChatIndicator href="/hesabim/mesajlar" count={chatUnread} />
               <DarkModeToggle />
               <PatientNotificationBell />
             </div>

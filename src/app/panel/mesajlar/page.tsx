@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { GlassCard } from "@/components/ui/GlassCard";
 import { ChatBox } from "@/components/chat/ChatBox";
+import { useChatViewportHeight } from "@/hooks/useChatViewportHeight";
 import { getAccessToken } from "@/lib/auth";
 import {
   api,
@@ -34,6 +34,8 @@ export default function AdminMessagesPage() {
   const [loadingThread, setLoadingThread] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const lastIdRef = useRef(0);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const vh = useChatViewportHeight(cardRef);
 
   const loadConversations = useCallback(() => {
     const token = getAccessToken();
@@ -129,8 +131,8 @@ export default function AdminMessagesPage() {
   const handleDelete = async (id: number) => {
     const token = getAccessToken();
     if (!token) return;
-    const updated = await api.admin.chatDeleteMessage(token, id);
-    setMessages((prev) => prev.map((m) => (m.id === id ? updated : m)));
+    await api.admin.chatDeleteMessage(token, id);
+    setMessages((prev) => prev.filter((m) => m.id !== id));
     loadConversations();
   };
 
@@ -145,7 +147,11 @@ export default function AdminMessagesPage() {
         </p>
       </div>
 
-      <GlassCard className="grid h-[70vh] grid-cols-1 overflow-hidden md:grid-cols-[300px_1fr]">
+      <div
+        ref={cardRef}
+        style={vh ? { height: `${vh}px` } : undefined}
+        className="glass grid h-[70vh] grid-cols-1 overflow-hidden rounded-3xl md:grid-cols-[300px_1fr]"
+      >
         {/* Sohbet listesi */}
         <div
           className={`flex flex-col border-slate-200/70 md:border-r dark:border-slate-700/60 ${
@@ -257,7 +263,7 @@ export default function AdminMessagesPage() {
             </>
           )}
         </div>
-      </GlassCard>
+      </div>
 
       {showNew && (
         <NewChatModal

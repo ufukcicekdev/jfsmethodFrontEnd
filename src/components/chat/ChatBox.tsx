@@ -90,16 +90,6 @@ function Bubble({
   const canAct = own && !message.is_deleted && (onEdit || onDelete);
   const canEdit = onEdit && message.message_type === "text";
 
-  if (message.is_deleted) {
-    return (
-      <div className={`flex ${own ? "justify-end" : "justify-start"}`}>
-        <div className="max-w-[80%] rounded-2xl bg-slate-100 px-3 py-2 text-sm italic text-slate-400 dark:bg-slate-800/60 dark:text-slate-500">
-          🚫 Bu mesaj silindi
-        </div>
-      </div>
-    );
-  }
-
   const base = "max-w-[80%] rounded-2xl px-3 py-2 text-sm shadow-sm break-words";
   const color = own
     ? "bg-blue-500 text-white rounded-br-md"
@@ -323,7 +313,7 @@ export function ChatBox({
             <p className="max-w-[240px] text-sm text-slate-400">{emptyText}</p>
           </div>
         ) : (
-          messages.map((m) => {
+          messages.filter((m) => !m.is_deleted).map((m) => {
             const day = formatDay(m.created_at);
             const showDay = day !== lastDay;
             lastDay = day;
