@@ -733,6 +733,27 @@ export interface ContactMessage {
   created_at: string;
 }
 
+export interface ChatMessage {
+  id: number;
+  is_from_staff: boolean;
+  sender_name: string;
+  message_type: "text" | "image" | "video";
+  text: string;
+  attachment_url: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface ChatConversation {
+  id: number;
+  patient_id: number;
+  patient_name: string;
+  patient_username: string;
+  last_message_at: string | null;
+  last_message_preview: string;
+  staff_unread: number;
+}
+
 export interface DayCancellationPreview {
   date: string;
   appointment_count: number;
@@ -2009,6 +2030,38 @@ export const api = {
       }
     },
 
+    chatConversations: (token: string) =>
+      apiFetch<{ conversations: ChatConversation[]; total_unread: number }>(
+        "/admin/chat/",
+        { token }
+      ),
+
+    chatUnread: (token: string) =>
+      apiFetch<{ total_unread: number }>("/admin/chat/unread/", { token }),
+
+    chatThread: (token: string, patientId: number, after?: number) =>
+      apiFetch<{
+        patient: { id: number; name: string; username: string };
+        messages: ChatMessage[];
+      }>(
+        `/admin/chat/${patientId}/${after ? `?after=${after}` : ""}`,
+        { token }
+      ),
+
+    chatSendText: (token: string, patientId: number, text: string) =>
+      apiFetch<ChatMessage>(`/admin/chat/${patientId}/send/`, {
+        token,
+        method: "POST",
+        body: JSON.stringify({ text }),
+      }),
+
+    chatSendFile: (token: string, patientId: number, file: File, text = "") => {
+      const form = new FormData();
+      form.append("attachment", file);
+      if (text) form.append("text", text);
+      return apiUpload<ChatMessage>(`/admin/chat/${patientId}/send/`, form, token);
+    },
+
     bodyMeasurements: (token: string, patientId: number) =>
       apiFetch<BodyMeasurement[]>(`/admin/patients/${patientId}/measurements/`, { token }),
 
@@ -2282,6 +2335,28 @@ export const api = {
         method: "POST",
         body: JSON.stringify(data),
       }),
+  },
+
+  chat: {
+    thread: (token: string, after?: number) =>
+      apiFetch<{ messages: ChatMessage[]; unread: number }>(
+        `/chat/${after ? `?after=${after}` : ""}`,
+        { token }
+      ),
+    unread: (token: string) =>
+      apiFetch<{ unread: number }>("/chat/unread/", { token }),
+    sendText: (token: string, text: string) =>
+      apiFetch<ChatMessage>("/chat/send/", {
+        token,
+        method: "POST",
+        body: JSON.stringify({ text }),
+      }),
+    sendFile: (token: string, file: File, text = "") => {
+      const form = new FormData();
+      form.append("attachment", file);
+      if (text) form.append("text", text);
+      return apiUpload<ChatMessage>("/chat/send/", form, token);
+    },
   },
 
   blog: {

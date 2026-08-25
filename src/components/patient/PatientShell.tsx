@@ -13,6 +13,7 @@ import { api } from "@/lib/api";
 
 const NAV_ITEMS = [
   { href: "/hesabim", label: "Genel Bakış", exact: true },
+  { href: "/hesabim/mesajlar", label: "Mesajlar", exact: false },
   { href: "/hesabim/paketler", label: "Paket / Randevu", exact: false },
   { href: "/hesabim/profil", label: "Profil & Kilo", exact: false },
   { href: "/hesabim/diyet", label: "Diyet Planım", exact: false },
@@ -66,11 +67,13 @@ function MenuIcon({ open }: { open: boolean }) {
 function SidebarContent({
   user,
   pathname,
+  chatUnread,
   onNavigate,
   onLogout,
 }: {
   user: { full_name: string; email: string };
   pathname: string;
+  chatUnread: number;
   onNavigate?: () => void;
   onLogout: () => void;
 }) {
@@ -100,13 +103,24 @@ function SidebarContent({
             key={item.href}
             href={item.href}
             onClick={onNavigate}
-            className={`block rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
               isActive(item.href, item.exact)
                 ? "bg-blue-500 text-white shadow-md shadow-blue-500/25"
                 : "text-slate-700 hover:bg-white/70 dark:text-slate-200 dark:hover:bg-slate-800/70"
             }`}
           >
-            {item.label}
+            <span className="flex-1">{item.label}</span>
+            {item.href === "/hesabim/mesajlar" && chatUnread > 0 && (
+              <span
+                className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${
+                  isActive(item.href, item.exact)
+                    ? "bg-white text-blue-600"
+                    : "bg-blue-500 text-white"
+                }`}
+              >
+                {chatUnread}
+              </span>
+            )}
           </Link>
         ))}
       </nav>
@@ -143,10 +157,25 @@ export function PatientShell({ children }: { children: ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // null = checking, true = has unanswered questions, false = all answered
   const [hasOnboarding, setHasOnboarding] = useState<boolean | null>(null);
+  const [chatUnread, setChatUnread] = useState(0);
 
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!user || isStaffUser(user)) return;
+    const load = () => {
+      const token = getAccessToken();
+      if (!token) return;
+      api.chat.unread(token)
+        .then((d) => setChatUnread(d.unread))
+        .catch(() => {});
+    };
+    load();
+    const t = setInterval(load, 15000);
+    return () => clearInterval(t);
+  }, [user, pathname]);
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
@@ -243,6 +272,7 @@ export function PatientShell({ children }: { children: ReactNode }) {
               <SidebarContent
                 user={user}
                 pathname={pathname}
+                chatUnread={chatUnread}
                 onNavigate={() => setMobileMenuOpen(false)}
                 onLogout={handleLogout}
               />
@@ -257,6 +287,7 @@ export function PatientShell({ children }: { children: ReactNode }) {
                 <SidebarContent
                   user={user}
                   pathname={pathname}
+                  chatUnread={chatUnread}
                   onLogout={handleLogout}
                 />
               </div>

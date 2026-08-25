@@ -100,6 +100,17 @@ const NAV_ITEMS = [
     ),
   },
   {
+    href: "/panel/iletisim",
+    slug: "iletisim",
+    label: "İletişim",
+    exact: false,
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
     href: "/panel/diyet",
     slug: "diyet",
     label: "Diyet",
@@ -230,12 +241,14 @@ function SidebarContent({
   user,
   pathname,
   allowedSections,
+  chatUnread,
   onNavigate,
   onLogout,
 }: {
   user: { full_name: string };
   pathname: string;
   allowedSections: string[] | null; // null = superuser (all access)
+  chatUnread: number;
   onNavigate?: () => void;
   onLogout: () => void;
 }) {
@@ -280,7 +293,18 @@ function SidebarContent({
             }`}
           >
             {item.icon}
-            {item.label}
+            <span className="flex-1">{item.label}</span>
+            {item.slug === "mesajlar" && chatUnread > 0 && (
+              <span
+                className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${
+                  isActive(item.href, item.exact)
+                    ? "bg-white text-blue-600"
+                    : "bg-blue-500 text-white"
+                }`}
+              >
+                {chatUnread}
+              </span>
+            )}
           </Link>
         ))}
       </nav>
@@ -317,6 +341,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // null = superuser (no restriction), [] = no restriction set, [...] = restricted list
   const [allowedSections, setAllowedSections] = useState<string[] | null>(null);
+  const [chatUnread, setChatUnread] = useState(0);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -325,6 +350,20 @@ export function PanelShell({ children }: { children: ReactNode }) {
       setAllowedSections(data.is_superuser ? null : data.allowed_sections);
     }).catch(() => {});
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const load = () => {
+      const token = getAccessToken();
+      if (!token) return;
+      api.admin.chatUnread(token)
+        .then((d) => setChatUnread(d.total_unread))
+        .catch(() => {});
+    };
+    load();
+    const t = setInterval(load, 15000);
+    return () => clearInterval(t);
+  }, [user, pathname]);
 
   // Rota koruması: kısıtlı bir admin yetkisi olmayan bir bölümün URL'sini
   // elle yazarsa, onu erişebildiği ilk bölüme yönlendir. (Genel Bakış /panel
@@ -429,6 +468,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
                 user={user}
                 pathname={pathname}
                 allowedSections={allowedSections}
+                chatUnread={chatUnread}
                 onNavigate={() => setMobileMenuOpen(false)}
                 onLogout={handleLogout}
               />
@@ -445,6 +485,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
                   user={user}
                   pathname={pathname}
                   allowedSections={allowedSections}
+                  chatUnread={chatUnread}
                   onLogout={handleLogout}
                 />
               </div>
