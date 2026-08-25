@@ -741,6 +741,8 @@ export interface ChatMessage {
   text: string;
   attachment_url: string | null;
   is_read: boolean;
+  is_deleted: boolean;
+  edited_at: string | null;
   created_at: string;
 }
 
@@ -2062,6 +2064,16 @@ export const api = {
       return apiUpload<ChatMessage>(`/admin/chat/${patientId}/send/`, form, token);
     },
 
+    chatEditMessage: (token: string, id: number, text: string) =>
+      apiFetch<ChatMessage>(`/admin/chat/messages/${id}/`, {
+        token,
+        method: "PATCH",
+        body: JSON.stringify({ text }),
+      }),
+
+    chatDeleteMessage: (token: string, id: number) =>
+      apiFetch<ChatMessage>(`/admin/chat/messages/${id}/`, { token, method: "DELETE" }),
+
     bodyMeasurements: (token: string, patientId: number) =>
       apiFetch<BodyMeasurement[]>(`/admin/patients/${patientId}/measurements/`, { token }),
 
@@ -2357,6 +2369,14 @@ export const api = {
       if (text) form.append("text", text);
       return apiUpload<ChatMessage>("/chat/send/", form, token);
     },
+    editMessage: (token: string, id: number, text: string) =>
+      apiFetch<ChatMessage>(`/chat/messages/${id}/`, {
+        token,
+        method: "PATCH",
+        body: JSON.stringify({ text }),
+      }),
+    deleteMessage: (token: string, id: number) =>
+      apiFetch<ChatMessage>(`/chat/messages/${id}/`, { token, method: "DELETE" }),
   },
 
   blog: {
