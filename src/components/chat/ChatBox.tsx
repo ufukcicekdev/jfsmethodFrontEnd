@@ -297,7 +297,7 @@ export function ChatBox({
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        className="flex-1 space-y-2 overflow-y-auto bg-slate-50/60 px-3 py-4 sm:px-4 dark:bg-slate-950/30"
+        className="min-h-0 flex-1 space-y-2 overflow-y-auto bg-slate-50/60 px-3 py-4 sm:px-4 dark:bg-slate-950/30"
       >
         {loading && messages.length === 0 ? (
           <div className="flex min-h-full items-center justify-center">

@@ -150,11 +150,11 @@ export default function AdminMessagesPage() {
       <div
         ref={cardRef}
         style={vh ? { height: `${vh}px` } : undefined}
-        className="glass grid h-[70vh] grid-cols-1 overflow-hidden rounded-3xl md:grid-cols-[300px_1fr]"
+        className="glass grid h-[70vh] grid-cols-1 grid-rows-1 overflow-hidden rounded-3xl md:grid-cols-[300px_1fr]"
       >
         {/* Sohbet listesi */}
         <div
-          className={`flex flex-col border-slate-200/70 md:border-r dark:border-slate-700/60 ${
+          className={`min-h-0 min-w-0 flex-col border-slate-200/70 md:border-r dark:border-slate-700/60 ${
             selected != null ? "hidden md:flex" : "flex"
           }`}
         >
@@ -221,7 +221,7 @@ export default function AdminMessagesPage() {
 
         {/* Aktif sohbet */}
         <div
-          className={`flex-col ${selected != null ? "flex" : "hidden md:flex"}`}
+          className={`min-h-0 min-w-0 flex-col ${selected != null ? "flex" : "hidden md:flex"}`}
         >
           {selected == null ? (
             <div className="flex h-full items-center justify-center">

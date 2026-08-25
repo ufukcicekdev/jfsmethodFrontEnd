@@ -25,7 +25,11 @@ export function useChatViewportHeight(
       const offsetTop = vv ? vv.offsetTop : 0;
       // Kartın görünür alan içindeki üst konumu
       const top = el.getBoundingClientRect().top - offsetTop;
-      const available = viewportHeight - top - bottomGap;
+      // Görünür alanı asla aşmasın (sayfa kayarsa büyümesin) ve min 320px.
+      const available = Math.min(
+        viewportHeight - bottomGap,
+        viewportHeight - top - bottomGap
+      );
       setHeight(Math.max(320, Math.round(available)));
     };
 
