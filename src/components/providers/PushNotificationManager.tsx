@@ -77,11 +77,12 @@ export function PushNotificationManager() {
     let unsubscribe: (() => void) | undefined;
 
     listenForegroundMessages((payload) => {
+      const data = payload.data ?? {};
       const notification = payload.notification;
       setToast({
-        title: notification?.title ?? "JFS Method",
-        body: notification?.body ?? "",
-        link: payload.data?.link,
+        title: data.title ?? notification?.title ?? "JFS Method",
+        body: data.body ?? notification?.body ?? "",
+        link: data.link,
       });
     }).then((fn) => {
       unsubscribe = fn;
